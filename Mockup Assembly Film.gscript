@@ -1,4 +1,4 @@
-VERSION v2.1
+VERSION v2.2
 CLEARLOG
 LOADCONFIG
 LOADCONFIG "" Scripts\Nebraska\ETL\assembly_positions.txt
@@ -19,7 +19,7 @@ COPY $weightA_num 1
 
 COPY $top_thickness {0,0,0.3}
 
-# HOME
+HOME if-needed
 
 #set vaccuums
 SETVAC "etl_chuck_{$topA_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
