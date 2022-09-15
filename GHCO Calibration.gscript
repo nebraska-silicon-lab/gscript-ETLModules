@@ -1,92 +1,54 @@
+# This script is to configure the gantry's tool_holder_offset (ghco) vector in the flex_config
 VERSION v2.2
 CLEARLOG
 LOADCONFIG
 LOADCONFIG "" Config\etl_assembly_positions.txt
 
+SETLOG "LOG_Calibrate_GHCO.txt"
+
+HOME if-needed
+SETVAC gantry_head_inner 0
+
 COPY $bot_chuck_num 2
-GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
+COPY $target_pos {77.968,205.635,86.999}
 
-COPY $topA_chuck_num 1
-COPY $topA_pos_num 5
-COPY $topB_chuck_num 1
-COPY $topB_pos_num 9
-COPY $topC_chuck_num 1
-COPY $topC_pos_num 6
-COPY $topD_chuck_num 1
-COPY $topD_pos_num 10
+COPY $top_chuck_num 1
+COPY $top_pos_num 5
 
-COPY $top_thickness {0,0,0.3}
+COPY $iterations 6
+COPY $step `360/$iterations`
+COPY $count 0
+
+@LOOP
+CHOICEPOPUP $_ "Ensure that the test part is staged."
 
 HOME if-needed
 
-#set vaccuums
-SETVAC "etl_chuck_{$topA_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
-SETVAC "etl_chuck_{$topB_chuck_num}_pos_{$topB_pos_num}" 1 #for top piece B
-SETVAC "etl_chuck_{$topC_chuck_num}_pos_{$topC_pos_num}" 1 #for top piece C
-SETVAC "etl_chuck_{$topD_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
+SETVAC "etl_chuck_{$top_chuck_num}_pos_{$top_pos_num}" 1 #for top piece
 
-#SETVAC etl_chuck_3 1  # vacuum for assembly plate
-
-
-MOVENAME "etl_chuck_{$bot_chuck_num}"
-CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 0 -> $bot_pos $bot_rot
-
-
-MOVENAME "etl_chuck_{$topA_chuck_num}"
-CALL @SURVEY_PART $topA_chuck_num $topA_pos_num 1 -> $topA_pos $topA_rot
-CALL @SURVEY_PART $topB_chuck_num $topB_pos_num 1 -> $topB_pos $topB_rot
-CALL @SURVEY_PART $topC_chuck_num $topC_pos_num 1 -> $topC_pos $topC_rot
-CALL @SURVEY_PART $topD_chuck_num $topD_pos_num 1 -> $topD_pos $topD_rot
-
-# TODO: Adjust "bot_pos" to place the top parts in the correct positions
-TRANSFORML2G $bot_pos_A {-11.7,10.87,0}  $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_B {-11.7,-10.83,0} $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_C {11.7,11.09,0}   $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_D {11.7,-10.605,0}  $bot_pos $bot_rot
-
-ADD $bot_rot_A $bot_rot -90
-ADD $bot_rot_B $bot_rot -90
-ADD $bot_rot_C $bot_rot 90
-ADD $bot_rot_D $bot_rot 90
+MOVENAME "etl_chuck_{$top_chuck_num}"
+CALL @SURVEY_PART $top_chuck_num $top_pos_num 1 -> $top_pos $top_rot
 
 LOADTOOL etl_picker_tool
-PICKPART $topA_pos $topA_rot "etl_chuck_{$topA_chuck_num}_pos_{$topA_pos_num}" "etl_chuck_{$topA_chuck_num}"
-PLACEPART $bot_pos_A $bot_rot_A "" "etl_chuck_{$bot_chuck_num}"
-PICKPART $topB_pos $topB_rot "etl_chuck_{$topB_chuck_num}_pos_{$topB_pos_num}" "etl_chuck_{$topB_chuck_num}"
-PLACEPART $bot_pos_B $bot_rot_B "" "etl_chuck_{$bot_chuck_num}"
-PICKPART $topC_pos $topC_rot "etl_chuck_{$topC_chuck_num}_pos_{$topC_pos_num}" "etl_chuck_{$topC_chuck_num}"
-PLACEPART $bot_pos_C $bot_rot_C "" "etl_chuck_{$bot_chuck_num}"
-PICKPART $topD_pos $topD_rot "etl_chuck_{$topD_chuck_num}_pos_{$topD_pos_num}" "etl_chuck_{$topD_chuck_num}"
-PLACEPART $bot_pos_D $bot_rot_D "" "etl_chuck_{$bot_chuck_num}"
+PICKPART $top_pos $top_rot "etl_chuck_{$top_chuck_num}_pos_{$top_pos_num}" "etl_chuck_{$top_chuck_num}"
+
+# target_rot = $step*$count - 180
+MUL $x $step $count
+SUB $target_rot $x 180
+
+PLACEPART $target_pos $target_rot "" "etl_chuck_{$bot_chuck_num}"
 
 UNLOADTOOL
 
-#CALL @APPLY_WEIGHT $weightA_num $bot_chuck_num $bot_pos $bot_rot
+CALL @SURVEY_CORRECTED $bot_chuck_num $target_pos $target_rot -> $pos_corr $rot_corr
+MOVENAME "etl_chuck_{$bot_chuck_num}"
+SUB $delta $pos_corr $target_pos
+COPY [$count] $delta
 
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A -> $pos_corr_A $rot_corr_A
-CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot_A $pos_corr_A $rot_corr_A 1
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B -> $pos_corr_B $rot_corr_B
-CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot_B $pos_corr_B $rot_corr_B 2
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C -> $pos_corr_C $rot_corr_C
-CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot_C $pos_corr_C $rot_corr_C 3
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D -> $pos_corr_D $rot_corr_D
-CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot_D $pos_corr_D $rot_corr_D 4
-
-movename home 50
+INC $count $count
+GOTOIF @LOOP `$count<$iterations`
 
 END
-
-@PRINT_SURVEY_RESULTS(target_pos,target_rot,meas_pos,meas_rot,chip_num)
-    PRINT "CHIP %d:" $chip_num
-    PRINT "    target: %v | %f deg" $target_pos $target_rot
-    PRINT "    actual: %v | %f deg" $meas_pos $meas_rot
-    SUB $pos_err $meas_pos $target_pos
-    SUB $rot_err $meas_rot $target_rot
-    PRINT "    delta:  %v | %f deg" $pos_err $rot_err
-    RETURN
 
 @SURVEY_CORRECTED(chuck_num,target_pos,target_rot)
 # Arguments:
@@ -114,7 +76,6 @@ END
     FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
-
 
 @SURVEY_PART(chuck_num,pos_num,is_top)
     # Arguments:
