@@ -16,7 +16,7 @@ COPY $resB_num 2
 COPY $weightA_num 1
 
 COPY $top_thickness {0,0,0.78} #make bigger for thickness of the module (piece getting picked up and placed)
-COPY $extra_gap {0,0,0.58} #measures fiducials on module pcb but this thickness accounts for sensor PCB and ETROC
+COPY $extra_gap {0,0,0.58} #measures fiducials on module pcb but this thickness accounts for sensor PCB and ETROC for gluing
 
 COPY $glue_A_disp {1.5,0,0}
 COPY $glue_B_disp {-1.5,0,0}
@@ -42,26 +42,23 @@ TRANSFORML2G $bot_pos_B {-11.6,-10.75,0} $bot_pos $bot_rot
 TRANSFORML2G $bot_pos_C {11.6,10.75,0}   $bot_pos $bot_rot
 TRANSFORML2G $bot_pos_D {11.6,-10.75,0}  $bot_pos $bot_rot
 
-ADD $glue_target_A $bot_pos_A $bot_pos_B
+#ALL GLUING STUFF NOT NEEDED?
 
-ADD $glue_target_A $glue_target_A $glue_A_disp 
+#ADD $glue_target_A $bot_pos_A $bot_pos_B
+#ADD $glue_target_A $glue_target_A $glue_A_disp 
+#MUL $glue_target_A $glue_target_A {0.5,0.5,0.5}
+#ADD $glue_target_B $bot_pos_C $bot_pos_D
+#ADD $glue_target_B $glue_target_B $glue_B_disp
+#MUL $glue_target_B $glue_target_B {0.5,0.5,0.5}
 
-MUL $glue_target_A $glue_target_A {0.5,0.5,0.5}
-ADD $glue_target_B $bot_pos_C $bot_pos_D
-
-ADD $glue_target_B $glue_target_B $glue_B_disp
-
-MUL $glue_target_B $glue_target_B {0.5,0.5,0.5}
-
-EULER2QUAT $target_rotA 90 0 0
-EULER2QUAT $target_rotB 90 0 0
-
-LOADTOOL grabber_tool
-LOADSTAMP $stampA_num 
-CALL @APPLY_GLUE $stampA_num $resA_num $bot_chuck_num $glue_target_A $bot_rot $target_rotA $extra_gap
-CALL @APPLY_GLUE $stampB_num $resB_num $bot_chuck_num $glue_target_B $bot_rot $target_rotB $extra_gap
-UNLOADSTAMP
-UNLOADTOOL
+#EULER2QUAT $target_rotA 90 0 0
+#EULER2QUAT $target_rotB 90 0 0
+#LOADTOOL grabber_tool
+#LOADSTAMP $stampA_num 
+#CALL @APPLY_GLUE $stampA_num $resA_num $bot_chuck_num $glue_target_A $bot_rot $target_rotA $extra_gap
+#CALL @APPLY_GLUE $stampB_num $resB_num $bot_chuck_num $glue_target_B $bot_rot $target_rotB $extra_gap
+#UNLOADSTAMP
+#UNLOADTOOL
 
 EULER2QUAT $targetA_rot 0 0 0
 
