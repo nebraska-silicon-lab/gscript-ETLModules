@@ -56,5 +56,5 @@ default.ETL_Sensor_PCB_Mockup.4.15.rot: {-0.003361,-0.003390,0.710073,-0.704112}
 default.ETL_Sensor_PCB_Mockup.4.16.rot: {-0.002833,-0.002819,0.707495,-0.706707}
 
 #top AlN positions
-default.ETL_AlN_Baseplate.4.13.pos: {636.687990,184.997297,76.779253}
-default.ETL_AlN_Baseplate.4.13.rot: {-0.002833,-0.002819,0.707495,-0.706707}
+default.ETL_AlN_Baseplate.1.4.pos: {460.772097,318.367235,73.997377}
+default.ETL_AlN_Baseplate.1.4.rot: {-0.000987,0.000489,0.001346,-0.999998}
