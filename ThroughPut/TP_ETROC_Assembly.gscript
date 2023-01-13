@@ -1,23 +1,27 @@
 VERSION v2.2
 CLEARLOG
 LOADCONFIG
-LOADCONFIG "" Scripts\ETLModules\TP_Config.txt
+LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+
+SETLOG "TP_Module_Data.txt"
 
 COPY $bot_chuck_num 3
 GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
 
 COPY $topA_chuck_num 4
-COPY $topA_pos_num 13
 COPY $topB_chuck_num 4
-COPY $topB_pos_num 14
 COPY $topC_chuck_num 4
-COPY $topC_pos_num 15
 COPY $topD_chuck_num 4
-COPY $topD_pos_num 16
 
-COPY $weightA_num 1
+# We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
+# on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
+# positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
+COPY $topA_pos_num $bot_pos_num
+COPY $topB_pos_num `$bot_pos_num+4`
+COPY $topC_pos_num `$bot_pos_num+8`
+COPY $topD_pos_num `$bot_pos_num+12`
 
-COPY $top_thickness {0,0,0.4} #get new thickness of throughput sub assembly
+COPY $top_thickness {0,0,0.6} #get new thickness of throughput sub assembly
 
 HOME if-needed
 
@@ -30,26 +34,41 @@ SETVAC "etl_chuck_{$topD_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
 
 SETVAC etl_chuck_3 1  # vacuum for assembly plate
 
+
 #Survey Module PCB
+MOVENAME "etl_chuck_{$bot_chuck_num}"
 CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
+MOVENAME "etl_chuck_{$bot_chuck_num}"
 
 #Survey all 4 ETROC - Sensor PCB Sub Assemblies
+MOVENAME "etl_chuck_{$topA_chuck_num}"
 CALL @SURVEY_PART $topA_chuck_num $topA_pos_num 2 1 -> $topA_pos $topA_rot
 CALL @SURVEY_PART $topB_chuck_num $topB_pos_num 2 1 -> $topB_pos $topB_rot
 CALL @SURVEY_PART $topC_chuck_num $topC_pos_num 2 1 -> $topC_pos $topC_rot
 CALL @SURVEY_PART $topD_chuck_num $topD_pos_num 2 1 -> $topD_pos $topD_rot
+MOVENAME "etl_chuck_{$topA_chuck_num}"
+
+#survey the LGAD
+#CALL @SURVEY_LGAD $topA_chuck_num $topA_pos_num 2 -> $LGAD_A_pos $LGAD_A_rot
+#CALL @SURVEY_LGAD $topB_chuck_num $topB_pos_num 2 -> $LGAD_B_pos $LGAD_B_rot
+#CALL @SURVEY_LGAD $topC_chuck_num $topC_pos_num 2 -> $LGAD_C_pos $LGAD_C_rot
+#CALL @SURVEY_LGAD $topD_chuck_num $topD_pos_num 2 -> $LGAD_D_pos $LGAD_D_rot
+
+#CALL @PRINT_SURVEY_RESULTS $topA_pos $topA_rot $LGAD_A_pos $LGAD_A_rot 1
+#CALL @PRINT_SURVEY_RESULTS $topB_pos $topB_rot $LGAD_B_pos $LGAD_B_rot 2
+#CALL @PRINT_SURVEY_RESULTS $topC_pos $topC_rot $LGAD_C_pos $LGAD_C_rot 3
+#CALL @PRINT_SURVEY_RESULTS $topD_pos $topD_rot $LGAD_D_pos $LGAD_D_rot 4
 
 # TODO: Adjust "bot_pos" to place the top parts in the correct positions
-#how do you do the relative positioning of these?
-TRANSFORML2G $bot_pos_A {-11.7,10.87,0}  $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_B {-11.7,-10.83,0} $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_C {11.7,11.09,0}   $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_D {11.7,-10.605,0}  $bot_pos $bot_rot
+TRANSFORML2G $bot_pos_A {-11.15,-10.9,0}  $bot_pos $bot_rot #for x, 9.75mm (sensor mockup y geometry length) + 1mm (fid distance) + 0.3mm + 0.1mm extra        
+TRANSFORML2G $bot_pos_B {11.15,-10.9,0} $bot_pos $bot_rot
+TRANSFORML2G $bot_pos_C {-11.15,10.9,0}   $bot_pos $bot_rot #for y, 9.5mm (sensor mockup x geometry length) + 1mm (fid distance) + 0.3mm + 0.1mm extra
+TRANSFORML2G $bot_pos_D {11.15,10.9,0}  $bot_pos $bot_rot
 
-ADD $bot_rot_A $bot_rot -90
-ADD $bot_rot_B $bot_rot -90
-ADD $bot_rot_C $bot_rot 90
-ADD $bot_rot_D $bot_rot 90
+ADD $bot_rot_A $bot_rot -180
+ADD $bot_rot_B $bot_rot -180
+ADD $bot_rot_C $bot_rot 0
+ADD $bot_rot_D $bot_rot 0
 
 LOADTOOL etl_picker_tool
 PICKPART $topA_pos $topA_rot "etl_chuck_4_pos_{$topA_pos_num}" etl_chuck_4
@@ -63,19 +82,18 @@ PLACEPART $bot_pos_D $bot_rot_D "" etl_chuck_3
 
 UNLOADTOOL
 
-#CALL @APPLY_WEIGHT $weightA_num $bot_chuck_num $bot_pos $bot_rot
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A 1 -> $pos_corr_A $rot_corr_A
+CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A 1 0 -> $pos_corr_A $rot_corr_A
 CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot_A $pos_corr_A $rot_corr_A 1
 
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B 1 -> $pos_corr_B $rot_corr_B
+CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B 1 0 -> $pos_corr_B $rot_corr_B
 CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot_B $pos_corr_B $rot_corr_B 2
 
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C 1 -> $pos_corr_C $rot_corr_C
+CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C 1 0 -> $pos_corr_C $rot_corr_C
 CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot_C $pos_corr_C $rot_corr_C 3
 
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D 1 -> $pos_corr_D $rot_corr_D
+CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D 1 0 -> $pos_corr_D $rot_corr_D
 CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot_D $pos_corr_D $rot_corr_D 4
+
 
 END
 
@@ -93,11 +111,13 @@ END
     #  $chuck_num - 
     #  $pos - 
     #  $rot -
+    #  $piece -
+
     FLEXREAD $tr_local geometry.ETL_Sensor_PCB_Mockup.fid_tr  
     FLEXREAD $tl_local geometry.ETL_Sensor_PCB_Mockup.fid_tl
     FLEXREAD $bl_local geometry.ETL_Sensor_PCB_Mockup.fid_bl
-    FLEXREAD $br_local geometry.ETL_Sensor_PCB_Mockup.fid_br
-
+    FLEXREAD $br_local geometry.ETL_Sensor_PCB_Mockup.fid_br 
+    
     TRANSFORML2G $tr_global $tr_local $target_pos $target_rot
     TRANSFORML2G $tl_global $tl_local $target_pos $target_rot
     TRANSFORML2G $bl_global $bl_local $target_pos $target_rot
@@ -115,11 +135,11 @@ END
     CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
     CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
 
-    FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+	   FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
 
-#ref_img_tl,ref_img_tr,ref_img_bl,ref_img_br,
+
 @SURVEY_PART(chuck_num,pos_num,piece,is_top)
     # Arguments:
     #  $chuck_num - 
@@ -155,9 +175,8 @@ END
     TRANSFORML2G $br_global $br_local $pos_default $rot_default
 
     #this is to get corrected centers and orientation, the code above gives general area
-    MOVENAME "etl_chuck_{$chuck_num}"
+    #MOVENAME "etl_chuck_{$chuck_num}"
     #Routine to set up inital position of metal piece
-
 
     COPY $tr 1
     COPY $br 2
@@ -178,6 +197,45 @@ END
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
 
+@SURVEY_LGAD(chuck_num,pos_num,piece)
+    # Arguments:
+    #  $chuck_num - 
+    #  $pos_num - 
+	
+    SETLIGHT 40
+	
+    FLEXREAD $tr_local geometry.ETL_LGAD_Mockup.fid_tr  
+    FLEXREAD $tl_local geometry.ETL_LGAD_Mockup.fid_tl
+    FLEXREAD $bl_local geometry.ETL_LGAD_Mockup.fid_bl
+    FLEXREAD $br_local geometry.ETL_LGAD_Mockup.fid_br
+
+    FLEXREAD $pos_default "default.ETL_LGAD_Mockup.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.ETL_LGAD_Mockup.{$chuck_num}.{$pos_num}.rot"
+	
+    #converts the local coordinates to global gantry coordinates usint start location and orientation
+    TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
+    TRANSFORML2G $tl_global $tl_local $pos_default $rot_default
+    TRANSFORML2G $bl_global $bl_local $pos_default $rot_default
+    TRANSFORML2G $br_global $br_local $pos_default $rot_default
+
+    #this is to get corrected centers and orientation, the code above gives general area
+    #MOVENAME "etl_chuck_{$chuck_num}"
+    #Routine to set up inital position of metal piece
+
+    COPY $tr 1
+    COPY $br 2
+    COPY $bl 3
+    COPY $tl 4
+    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
+
+    # Turns measured corners or fiducials into center and orientation
+    FIT $pos $rot ETL_LGAD_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    QUAT2EULER $phi $_ $_ $rot
+    RETURN $pos $phi
+
 @ACQUIREFIDUCIAL(start_pos,piece,loc)
     # Arguments:
     #  $start_pos - Position to initially search for the fiducial
@@ -186,17 +244,16 @@ END
     MOVETO $start_pos 50
     WAIT 100
 
-    GOTO @manual_fiducial_acquisition
+    # GOTO @manual_fiducial_acquisition
 
     SETERRORMODE setvar
-    FINDFID $fid_position ETL_PCB_Mockup
+    FINDFID $fid_position etl_throughput_etroc
     GOTOIF @manual_fiducial_acquisition $ERR
     SETERRORMODE default
     RETURN $fid_position
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    FLEXWRITE reference_image.img "C:\Users\User\Desktop\gantry-config-nebraska\Scripts\ETLModules\ref_imgs\ref_image_{$piece}_{$loc}.png"
-    VIDEO "" img
+    VIDEO
     getpos $fid_position
     RETURN $fid_position

@@ -1,21 +1,22 @@
 VERSION v2.2
 CLEARLOG
 LOADCONFIG
-LOADCONFIG "" Scripts\ETLModules\assembly_positions.txt
+LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+SETLOG "TP_BasePlate_Data.txt"
 
 COPY $bot_chuck_num 3
 GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
 
-COPY $AlN_chuck_num 1
-COPY $AlN_pos_num 4
+COPY $AlN_chuck_num 4
+COPY $AlN_pos_num 5 #5,6,7,8 are the positions of the baseplate becuase those are the vacuum lines hooked up to it 
 
-COPY $top_thickness {0,0,0.72}
+COPY $top_thickness {0,0,0.6}
 
 HOME if-needed
 
 
 #set vaccuums
-SETVAC "etl_chuck_{$AlN_chuck_num}" 1 #for AlN piece
+SETVAC "etl_chuck_{$AlN_chuck_num}_pos_{$AlN_pos_num}" 1 #for AlN baseplate piece
 SETVAC etl_chuck_3 1  # vacuum for assembly plate
 
 #Survey Module PCB
@@ -28,11 +29,13 @@ CALL @SURVEY_PART $AlN_chuck_num $AlN_pos_num 2 1 -> $AlN_pos $AlN_rot
 SUB $bot_pos $bot_pos $top_thickness #subtract bec positive down
 
 LOADTOOL etl_picker_tool
-PICKPART $AlN_pos $AlN_rot "etl_chuck_{$AlN_chuck_num}" "etl_chuck_{$AlN_chuck_num}"
+PICKPART $AlN_pos $AlN_rot "etl_chuck_{$AlN_chuck_num}_pos_{$AlN_pos_num}" "etl_chuck_{$AlN_chuck_num}"
 PLACEPART $bot_pos $bot_rot "" etl_chuck_3
 
 UNLOADTOOL
 
+CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos $bot_rot 1 0 -> $pos_corr $rot_corr
+CALL @PRINT_SURVEY_RESULTS $bot_pos $bot_rot $pos_corr $rot_corr 0
 
 END
 
@@ -72,7 +75,7 @@ END
     CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
     CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
 
-    FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    FIT $pos $rot ETL_AlN_Baseplate $tr_corrected $br_corrected $bl_corrected $tl_corrected
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
 
