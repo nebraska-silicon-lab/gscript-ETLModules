@@ -1,0 +1,159 @@
+VERSION v2.2
+CLEARLOG
+LOADCONFIG
+LOADCONFIG "" Scripts\ETLModules\assembly_positions.txt
+
+COPY $bot_chuck_num 3
+GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
+
+COPY $AlN_chuck_num 4 #make sure you change in assembly text too! so they match!
+COPY $AlN_pos_num 0 #NEED TO ADD ALN POSITIONS TO ASSEMBLY POSITIONS WHEN WE GET THE PIECE FROM THE SHOP
+
+COPY $top_thickness {0,0,0.78} #make sure this is the thickness too!
+
+HOME if-needed
+
+
+#set vaccuums
+SETVAC "etl_chuck_{$AlN_chuck_num}" 1 #for AlN piece
+SETVAC etl_chuck_3 1  # vacuum for assembly plate
+
+#Survey Module PCB
+CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
+
+#Survey AlN Baseplate
+CALL @SURVEY_PART $AlN_chuck_num $AlN_pos_num 2 1 -> $AlN_pos $AlN_rot
+
+#adjust bottom position to account for thickness of the ETROC-Sensor PCB SubAssembly
+SUB $bot_pos $bot_pos $top_thickness #subtract bec positive down
+
+LOADTOOL etl_picker_tool
+PICKPART $AlN_pos $AlN_rot "etl_chuck_{$AlN_chuck_num}" "etl_chuck_{$AlN_chuck_num}"
+PLACEPART $bot_pos $bot_rot "" etl_chuck_3
+
+UNLOADTOOL
+
+
+END
+
+@PRINT_SURVEY_RESULTS(target_pos,target_rot,meas_pos,meas_rot,chip_num)
+    PRINT "CHIP %d:" $chip_num
+    PRINT "    target: %v | %f deg" $target_pos $target_rot
+    PRINT "    actual: %v | %f deg" $meas_pos $meas_rot
+    SUB $pos_err $meas_pos $target_pos
+    SUB $rot_err $meas_rot $target_rot
+    PRINT "    delta:  %v | %f deg" $pos_err $rot_err
+    RETURN
+
+@SURVEY_CORRECTED(chuck_num,target_pos,target_rot,piece)
+# Arguments:
+    #  $chuck_num - 
+    #  $pos - 
+    #  $rot -
+    FLEXREAD $tr_local geometry.ETL_AlN_Baseplate.fid_tr  
+    FLEXREAD $tl_local geometry.ETL_AlN_Baseplate.fid_tl
+    FLEXREAD $bl_local geometry.ETL_AlN_Baseplate.fid_bl
+    FLEXREAD $br_local geometry.ETL_AlN_Baseplate.fid_br
+
+    TRANSFORML2G $tr_global $tr_local $target_pos $target_rot
+    TRANSFORML2G $tl_global $tl_local $target_pos $target_rot
+    TRANSFORML2G $bl_global $bl_local $target_pos $target_rot
+    TRANSFORML2G $br_global $br_local $target_pos $target_rot
+
+    #this is to get corrected centers and orientation, the code above gives general area
+    MOVENAME "etl_chuck_{$chuck_num}"
+    #Routine to set up inital position of metal piece
+    COPY $tr 1
+    COPY $br 2
+    COPY $bl 3
+    COPY $tl 4
+    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
+
+    FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    QUAT2EULER $phi $_ $_ $rot
+    RETURN $pos $phi
+
+
+@SURVEY_PART(chuck_num,pos_num,piece,is_top)
+    # Arguments:
+    #  $chuck_num - 
+    #  $pos_num - 
+	   #  $is_top - 1 for survey position of top, 0 for bottom
+	
+    SETLIGHT 40
+	
+	   GOTOIF @LOAD_TOP_DATA $is_top
+    FLEXREAD $tr_local geometry.ETL_mock_base.fid_tr  
+    FLEXREAD $tl_local geometry.ETL_mock_base.fid_tl
+    FLEXREAD $bl_local geometry.ETL_mock_base.fid_bl
+    FLEXREAD $br_local geometry.ETL_mock_base.fid_br
+
+    FLEXREAD $pos_default "default.ETL_mock_base.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.ETL_mock_base.{$chuck_num}.{$pos_num}.rot"
+    GOTO @END_LOAD
+	
+	   @LOAD_TOP_DATA
+    FLEXREAD $tr_local geometry.ETL_AlN_Baseplate.fid_tr  
+    FLEXREAD $tl_local geometry.ETL_AlN_Baseplate.fid_tl
+    FLEXREAD $bl_local geometry.ETL_AlN_Baseplate.fid_bl
+    FLEXREAD $br_local geometry.ETL_AlN_Baseplate.fid_br
+
+    FLEXREAD $pos_default "default.ETL_AlN_Baseplate.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.ETL_AlN_Baseplate.{$chuck_num}.{$pos_num}.rot"
+    @END_LOAD
+	
+    #converts the local coordinates to global gantry coordinates usint start location and orientation
+    TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
+    TRANSFORML2G $tl_global $tl_local $pos_default $rot_default
+    TRANSFORML2G $bl_global $bl_local $pos_default $rot_default
+    TRANSFORML2G $br_global $br_local $pos_default $rot_default
+
+    #this is to get corrected centers and orientation, the code above gives general area
+    MOVENAME "etl_chuck_{$chuck_num}"
+    #Routine to set up inital position of metal piece
+
+
+    COPY $tr 1
+    COPY $br 2
+    COPY $bl 3
+    COPY $tl 4
+    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
+
+    # Turns measured corners or fiducials into center and orientation
+	   GOTOIFN @FIT_TOP $is_top
+    FIT $pos $rot ETL_AlN_Baseplate $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    GOTO @FINISH_SURVEY
+	   @FIT_TOP
+	   FIT $pos $rot ETL_mock_base $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    @FINISH_SURVEY
+    QUAT2EULER $phi $_ $_ $rot
+    RETURN $pos $phi
+
+@ACQUIREFIDUCIAL(start_pos,piece,loc)
+    # Arguments:
+    #  $start_pos - Position to initially search for the fiducial
+	   #  $piece - PCB or ETROC, 1 or 2 respectively
+    #  $loc - tr == 1, br == 2, bl == 3, tl == 4
+    MOVETO $start_pos 50
+    WAIT 100
+
+    GOTO @manual_fiducial_acquisition
+
+    SETERRORMODE setvar
+    FINDFID $fid_position ETL_PCB_Mockup
+    GOTOIF @manual_fiducial_acquisition $ERR
+    SETERRORMODE default
+    RETURN $fid_position
+    
+    @manual_fiducial_acquisition
+    SETERRORMODE default
+    FLEXWRITE reference_image.img "C:\Users\User\Desktop\gantry-config-nebraska\Scripts\ETLModules\ref_imgs\ref_image_{$piece}_{$loc}.png"
+    VIDEO "" img
+    getpos $fid_position
+    RETURN $fid_position

@@ -19,6 +19,11 @@ geometry.ETL_Sensor_PCB_Mockup.fid_tl: {-9.74,-10.89,0}
 geometry.ETL_Sensor_PCB_Mockup.fid_bl: {-9.74,-10.40,0}
 geometry.ETL_Sensor_PCB_Mockup.fid_br: {9.64,-10.40,0}
 
+#geometry of AlN
+geometry.ETL_AlN_Baseplate.fid_tr: {28.22,-21.51,0}
+geometry.ETL_AlN_Baseplate.fid_tl: {-28.22,-21.51,0}
+geometry.ETL_AlN_Baseplate.fid_bl: {-28.22,21.51,0}
+geometry.ETL_AlN_Baseplate.fid_br: {28.22,21.51,0}
 
 geometry.ETL_mock_base.fid_tr: {27.25,-20.55,0}
 geometry.ETL_mock_base.fid_tl: {-27.25,-20.55,0}
@@ -40,7 +45,6 @@ default.ETL_mock_base.3.4.rot: {-0.000760,-0.000159,-0.002072,0.999998}
 
 
 #top (#updated)
-
 default.ETL_Sensor_PCB_Mockup.4.13.pos: {636.687990,184.997297,76.779253}
 default.ETL_Sensor_PCB_Mockup.4.14.pos: {694.033456,184.865368,76.785546}
 default.ETL_Sensor_PCB_Mockup.4.15.pos: {751.380179,184.954761,76.806428}
@@ -50,3 +54,7 @@ default.ETL_Sensor_PCB_Mockup.4.13.rot: {-0.003101,-0.003102,0.711269,-0.702906}
 default.ETL_Sensor_PCB_Mockup.4.14.rot: {-0.002931,-0.002900,0.705296,-0.708901}
 default.ETL_Sensor_PCB_Mockup.4.15.rot: {-0.003361,-0.003390,0.710073,-0.704112}
 default.ETL_Sensor_PCB_Mockup.4.16.rot: {-0.002833,-0.002819,0.707495,-0.706707}
+
+#top AlN positions
+default.ETL_AlN_Baseplate.4.13.pos: {636.687990,184.997297,76.779253}
+default.ETL_AlN_Baseplate.4.13.rot: {-0.002833,-0.002819,0.707495,-0.706707}
