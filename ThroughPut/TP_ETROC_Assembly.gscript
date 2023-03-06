@@ -6,96 +6,100 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 SETLOG "TP_Module_Data.txt"
 
 COPY $bot_chuck_num 3
-GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
+#GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
+COPY $top_chuck_num 4
 
-COPY $topA_chuck_num 4
-COPY $topB_chuck_num 4
-COPY $topC_chuck_num 4
-COPY $topD_chuck_num 4
+SETVAC "etl_chuck_{$bot_chuck_num}" 1  # vacuum for assembly plate
+CALL @MAKE_MODULE 1 $bot_chuck_num $top_chuck_num 1
+SETVAC "etl_chuck_{$bot_chuck_num}" 0  # vacuum for assembly plate
+
+END
+
+
+@MAKE_MODULE(bot_pos_num,bot_chuck_num,top_chuck_num,print_results)
+#Arguments
+#    bot_pos_num = position number of the Module PCB, we infer the ETROC+LGAD subassembly positions from this number
+#    bot_chuck_num = chuck number of the Module PCB
+#    top_chuck_num = chuck number of ETROC+LGAD subasssemblies
+#    print_results = 0 for dont get placement data and 1 to get placement data
 
 # We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
 # on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
 # positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
-COPY $topA_pos_num $bot_pos_num
-COPY $topB_pos_num `$bot_pos_num+4`
-COPY $topC_pos_num `$bot_pos_num+8`
-COPY $topD_pos_num `$bot_pos_num+12`
+    COPY $topA_pos_num $bot_pos_num
+    COPY $topB_pos_num `$bot_pos_num+4`
+    COPY $topC_pos_num `$bot_pos_num+8`
+    COPY $topD_pos_num `$bot_pos_num+12`
+    COPY $top_thickness {0,0,0.6} #get new thickness of throughput sub assembly
+    HOME if-needed
+    #set vaccuums
+    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
+    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" 1 #for top piece B
+    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" 1 #for top piece C
+    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
+    
 
-COPY $top_thickness {0,0,0.6} #get new thickness of throughput sub assembly
+    #Survey Module PCB
+    MOVENAME "etl_chuck_{$bot_chuck_num}"
+    CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
+    MOVENAME "etl_chuck_{$bot_chuck_num}"
 
-HOME if-needed
+    #Survey all 4 ETROC - Sensor PCB Sub Assemblies
+    MOVENAME "etl_chuck_{$top_chuck_num}"
+    CALL @SURVEY_PART $top_chuck_num $topA_pos_num 2 1 -> $topA_pos $topA_rot
+    CALL @SURVEY_PART $top_chuck_num $topB_pos_num 2 1 -> $topB_pos $topB_rot
+    CALL @SURVEY_PART $top_chuck_num $topC_pos_num 2 1 -> $topC_pos $topC_rot
+    CALL @SURVEY_PART $top_chuck_num $topD_pos_num 2 1 -> $topD_pos $topD_rot
+    MOVENAME "etl_chuck_{$top_chuck_num}"
 
+    #survey the LGAD, NOT IMPLEMENTED FOR FUNCTION DEF NEEDS UPDATE DONT UNCOMMENT NOW
+    #CALL @SURVEY_LGAD $top_chuck_num $topA_pos_num 2 -> $LGAD_A_pos $LGAD_A_rot
+    #CALL @SURVEY_LGAD $top_chuck_num $topB_pos_num 2 -> $LGAD_B_pos $LGAD_B_rot
+    #CALL @SURVEY_LGAD $top_chuck_num $topC_pos_num 2 -> $LGAD_C_pos $LGAD_C_rot
+    #CALL @SURVEY_LGAD $top_chuck_num $topD_pos_num 2 -> $LGAD_D_pos $LGAD_D_rot
+    
+    #CALL @PRINT_SURVEY_RESULTS $topA_pos $topA_rot $LGAD_A_pos $LGAD_A_rot 1
+    #CALL @PRINT_SURVEY_RESULTS $topB_pos $topB_rot $LGAD_B_pos $LGAD_B_rot 2
+    #CALL @PRINT_SURVEY_RESULTS $topC_pos $topC_rot $LGAD_C_pos $LGAD_C_rot 3
+    #CALL @PRINT_SURVEY_RESULTS $topD_pos $topD_rot $LGAD_D_pos $LGAD_D_rot 4
 
-#set vaccuums
-SETVAC "etl_chuck_{$topA_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
-SETVAC "etl_chuck_{$topB_chuck_num}_pos_{$topB_pos_num}" 1 #for top piece B
-SETVAC "etl_chuck_{$topC_chuck_num}_pos_{$topC_pos_num}" 1 #for top piece C
-SETVAC "etl_chuck_{$topD_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
+    #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
+    TRANSFORML2G $bot_pos_A {-11.0,-11.05,0}  $bot_pos $bot_rot       
+    TRANSFORML2G $bot_pos_B {11.0,-11.05,0} $bot_pos $bot_rot
+    TRANSFORML2G $bot_pos_C {-11.0,11.05,0}   $bot_pos $bot_rot
+    TRANSFORML2G $bot_pos_D {11.0,11.05,0}  $bot_pos $bot_rot
 
-SETVAC etl_chuck_3 1  # vacuum for assembly plate
+    #PICK AND PLACE ALL SUB ASSEMBLIES ONTO MODULE PCB
+    LOADTOOL etl_picker_tool
+    #THIS IS NOT CORRECT GENERALLY! COULD GO OVER OR UNDER, CREATE SIGN FUCNTION TO FIX
+    ADD $topA_rot $topA_rot -180 #since it is rotated -180 deg on staging area
+    ADD $topB_rot $topB_rot -180 #need to rotate it back 
 
+    PICKPART $topA_pos $topA_rot "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" etl_chuck_4
+    PLACEPART $bot_pos_A $topB_rot "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topB_pos $bot_rot_A "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" etl_chuck_4
+    PLACEPART $bot_pos_B $bot_rot_B "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topC_pos $topC_rot "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" etl_chuck_4
+    PLACEPART $bot_pos_C $bot_rot_C "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topD_pos $topD_rot "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" etl_chuck_4
+    PLACEPART $bot_pos_D $bot_rot_D "" etl_chuck_{$bot_chuck_num}
+    UNLOADTOOL
 
-#Survey Module PCB
-MOVENAME "etl_chuck_{$bot_chuck_num}"
-CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
-MOVENAME "etl_chuck_{$bot_chuck_num}"
+    GOTOIF @NOPRINT $print_results
+    MOVENAME "etl_chuck_{$bot_chuck_num}"
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A 1 0 -> $pos_corr_A $rot_corr_A
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot_A $pos_corr_A $rot_corr_A 1
 
-#Survey all 4 ETROC - Sensor PCB Sub Assemblies
-MOVENAME "etl_chuck_{$topA_chuck_num}"
-CALL @SURVEY_PART $topA_chuck_num $topA_pos_num 2 1 -> $topA_pos $topA_rot
-CALL @SURVEY_PART $topB_chuck_num $topB_pos_num 2 1 -> $topB_pos $topB_rot
-CALL @SURVEY_PART $topC_chuck_num $topC_pos_num 2 1 -> $topC_pos $topC_rot
-CALL @SURVEY_PART $topD_chuck_num $topD_pos_num 2 1 -> $topD_pos $topD_rot
-MOVENAME "etl_chuck_{$topA_chuck_num}"
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B 1 0 -> $pos_corr_B $rot_corr_B
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot_B $pos_corr_B $rot_corr_B 2
 
-#survey the LGAD
-#CALL @SURVEY_LGAD $topA_chuck_num $topA_pos_num 2 -> $LGAD_A_pos $LGAD_A_rot
-#CALL @SURVEY_LGAD $topB_chuck_num $topB_pos_num 2 -> $LGAD_B_pos $LGAD_B_rot
-#CALL @SURVEY_LGAD $topC_chuck_num $topC_pos_num 2 -> $LGAD_C_pos $LGAD_C_rot
-#CALL @SURVEY_LGAD $topD_chuck_num $topD_pos_num 2 -> $LGAD_D_pos $LGAD_D_rot
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C 1 0 -> $pos_corr_C $rot_corr_C
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot_C $pos_corr_C $rot_corr_C 3
 
-#CALL @PRINT_SURVEY_RESULTS $topA_pos $topA_rot $LGAD_A_pos $LGAD_A_rot 1
-#CALL @PRINT_SURVEY_RESULTS $topB_pos $topB_rot $LGAD_B_pos $LGAD_B_rot 2
-#CALL @PRINT_SURVEY_RESULTS $topC_pos $topC_rot $LGAD_C_pos $LGAD_C_rot 3
-#CALL @PRINT_SURVEY_RESULTS $topD_pos $topD_rot $LGAD_D_pos $LGAD_D_rot 4
-
-# TODO: Adjust "bot_pos" to place the top parts in the correct positions
-TRANSFORML2G $bot_pos_A {-11.15,-10.9,0}  $bot_pos $bot_rot #for x, 9.75mm (sensor mockup y geometry length) + 1mm (fid distance) + 0.3mm + 0.1mm extra        
-TRANSFORML2G $bot_pos_B {11.15,-10.9,0} $bot_pos $bot_rot
-TRANSFORML2G $bot_pos_C {-11.15,10.9,0}   $bot_pos $bot_rot #for y, 9.5mm (sensor mockup x geometry length) + 1mm (fid distance) + 0.3mm + 0.1mm extra
-TRANSFORML2G $bot_pos_D {11.15,10.9,0}  $bot_pos $bot_rot
-
-ADD $bot_rot_A $bot_rot -180
-ADD $bot_rot_B $bot_rot -180
-ADD $bot_rot_C $bot_rot 0
-ADD $bot_rot_D $bot_rot 0
-
-LOADTOOL etl_picker_tool
-PICKPART $topA_pos $topA_rot "etl_chuck_4_pos_{$topA_pos_num}" etl_chuck_4
-PLACEPART $bot_pos_A $bot_rot_A "" etl_chuck_3
-PICKPART $topB_pos $topB_rot "etl_chuck_4_pos_{$topB_pos_num}" etl_chuck_4
-PLACEPART $bot_pos_B $bot_rot_B "" etl_chuck_3
-PICKPART $topC_pos $topC_rot "etl_chuck_4_pos_{$topC_pos_num}" etl_chuck_4
-PLACEPART $bot_pos_C $bot_rot_C "" etl_chuck_3
-PICKPART $topD_pos $topD_rot "etl_chuck_4_pos_{$topD_pos_num}" etl_chuck_4
-PLACEPART $bot_pos_D $bot_rot_D "" etl_chuck_3
-
-UNLOADTOOL
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A 1 0 -> $pos_corr_A $rot_corr_A
-CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot_A $pos_corr_A $rot_corr_A 1
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B 1 0 -> $pos_corr_B $rot_corr_B
-CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot_B $pos_corr_B $rot_corr_B 2
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C 1 0 -> $pos_corr_C $rot_corr_C
-CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot_C $pos_corr_C $rot_corr_C 3
-
-CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D 1 0 -> $pos_corr_D $rot_corr_D
-CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot_D $pos_corr_D $rot_corr_D 4
-
-
-END
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D 1 0 -> $pos_corr_D $rot_corr_D
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot_D $pos_corr_D $rot_corr_D 4
+    @NOPRINT
+    RETURN
 
 @PRINT_SURVEY_RESULTS(target_pos,target_rot,meas_pos,meas_rot,chip_num)
     PRINT "CHIP %d:" $chip_num
@@ -124,7 +128,7 @@ END
     TRANSFORML2G $br_global $br_local $target_pos $target_rot
 
     #this is to get corrected centers and orientation, the code above gives general area
-    MOVENAME "etl_chuck_{$chuck_num}"
+    #MOVENAME "etl_chuck_{$chuck_num}"
     #Routine to set up inital position of metal piece
     COPY $tr 1
     COPY $br 2

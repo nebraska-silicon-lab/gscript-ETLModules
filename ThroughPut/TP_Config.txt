@@ -17,10 +17,16 @@ geometry.ETL_LGAD_Mockup.fid_bl: {-9.7,0,0}
 geometry.ETL_LGAD_Mockup.fid_br: {0,9.8,0}
 
 #geometry of throughput baseplate 
-geometry.ETL_AlN_Baseplate.fid_tr: {28.75,-20.05,0}
-geometry.ETL_AlN_Baseplate.fid_tl: {-28.75,-22.05,0}
-geometry.ETL_AlN_Baseplate.fid_bl: {-28.75,22.05,0}
-geometry.ETL_AlN_Baseplate.fid_br: {28.75,22.05,0}
+#geometry.ETL_AlN_Baseplate.fid_tr: {28.75,-20.05,0}
+#geometry.ETL_AlN_Baseplate.fid_tl: {-28.75,-22.05,0}
+#geometry.ETL_AlN_Baseplate.fid_bl: {-28.75,22.05,0}
+#geometry.ETL_AlN_Baseplate.fid_br: {28.75,22.05,0}
+
+geometry.ETL_AlN_Baseplate.fid_tr: {20.05,-28.75,0}
+geometry.ETL_AlN_Baseplate.fid_tl: {-22.05,-28.75,0}
+geometry.ETL_AlN_Baseplate.fid_bl: {-22.05,28.75,0}
+geometry.ETL_AlN_Baseplate.fid_br: {22.05,28.75,0}
+
 
 #throuhput PCB geometries
 geometry.ETL_mock_base.fid_tr: {19.55,-26.741,0}
@@ -60,6 +66,7 @@ default.ETL_Sensor_PCB_Mockup.4.15.pos: {420.097537,421.163421,76.863986}
 default.ETL_Sensor_PCB_Mockup.4.16.pos: {420.372243,478.358874,77.015241}
 
 #etroc rotations
+#pi rotation
 default.ETL_Sensor_PCB_Mockup.4.1.rot: {0.001641,0.002118,0.999995,-0.001739}
 default.ETL_Sensor_PCB_Mockup.4.2.rot: {-0.001382,0.000074,-0.999973,-0.007196}
 default.ETL_Sensor_PCB_Mockup.4.3.rot: {-0.000529,0.000767,-0.999993,0.003651}
@@ -68,6 +75,8 @@ default.ETL_Sensor_PCB_Mockup.4.5.rot: {0.000915,0.001542,0.999989,-0.004368}
 default.ETL_Sensor_PCB_Mockup.4.6.rot: {0.002235,0.000264,0.999993,-0.002945}
 default.ETL_Sensor_PCB_Mockup.4.7.rot: {-0.003028,0.000382,-0.999995,0.000233}
 default.ETL_Sensor_PCB_Mockup.4.8.rot: {-0.001185,0.002949,-0.999995,0.000274}
+#different rotation because staged differently! Natural positoin is this position
+#0 rotation
 default.ETL_Sensor_PCB_Mockup.4.9.rot: {0.002243,-0.000201,0.001777,-0.999996}
 default.ETL_Sensor_PCB_Mockup.4.10.rot: {-0.001283,0.000787,-0.001549,-0.999998}
 default.ETL_Sensor_PCB_Mockup.4.11.rot: {-0.000449,0.000460,0.000284,-1.000000}
@@ -89,18 +98,18 @@ default.ETL_LGAD_Mockup.4.14.rot: {0,0,0,0}
 default.ETL_LGAD_Mockup.4.15.rot: {0,0,0,0}
 default.ETL_LGAD_Mockup.4.16.rot: {0,0,0,0} #might of put in wrong angle? if so flip signs for all the 16 ones, otherwise im confident
 
-#top AlN positions
-default.ETL_AlN_Baseplate.4.5.pos: {455.429596,318.531283,74.981827}
-default.ETL_AlN_Baseplate.4.5.rot: {-0.000536,0.000121,0.701178,0.712986}
+#top AlN positions #all of these are probably wrong??
+default.ETL_AlN_Baseplate.4.5.pos: {455.575239,318.453326,75.001456}
+default.ETL_AlN_Baseplate.4.5.rot: {-0.002851,-0.000186,0.706562,0.707645}
 
-default.ETL_AlN_Baseplate.4.6.pos: {455.541784,371.811026,74.991249}
-default.ETL_AlN_Baseplate.4.6.rot: {-0.001639,-0.000538,0.704398,0.709803}
+default.ETL_AlN_Baseplate.4.6.pos: {455.699393,372.473164,74.957204}
+default.ETL_AlN_Baseplate.4.6.rot: {-0.001867,-0.000264,0.706758,0.707453}
 
-default.ETL_AlN_Baseplate.4.7.pos: {455.516398,425.765327,74.967501}
-default.ETL_AlN_Baseplate.4.7.rot: {-0.000397,0.000345,0.704207,0.709995}
+default.ETL_AlN_Baseplate.4.7.pos: {455.807988,426.431851,74.962502}
+default.ETL_AlN_Baseplate.4.7.rot: {-0.001289,-0.000108,0.706500,0.707712}
 
-default.ETL_AlN_Baseplate.4.8.pos: {455.537277,479.767774,74.981250}
-default.ETL_AlN_Baseplate.4.8.rot: {-0.000617,-0.000085,0.704436,0.709767}
+default.ETL_AlN_Baseplate.4.8.pos: {455.942749,480.433468,75.072119}
+default.ETL_AlN_Baseplate.4.8.rot: {-0.000860,-0.000900,0.706716,0.707496}
 
 #Pattern Recognition Parameters
 vision.etl_throughput_etroc.method: find_patches

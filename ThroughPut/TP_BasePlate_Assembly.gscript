@@ -8,7 +8,8 @@ COPY $bot_chuck_num 3
 GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
 
 COPY $AlN_chuck_num 4
-COPY $AlN_pos_num 5 #5,6,7,8 are the positions of the baseplate becuase those are the vacuum lines hooked up to it 
+
+COPY $AlN_pos_num `$bot_pos_num+4` #5,6,7,8 are the positions of the baseplate becuase those are the vacuum lines hooked up to it 
 
 COPY $top_thickness {0,0,0.6}
 
@@ -156,7 +157,7 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    FLEXWRITE reference_image.img "C:\Users\User\Desktop\gantry-config-nebraska\Scripts\ETLModules\ref_imgs\ref_image_{$piece}_{$loc}.png"
-    VIDEO "" img
+    #FLEXWRITE reference_image.img "C:\Users\User\Desktop\gantry-config-nebraska\Scripts\ETLModules\ref_imgs\ref_image_{$piece}_{$loc}.png"
+    VIDEO 
     getpos $fid_position
     RETURN $fid_position
