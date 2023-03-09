@@ -2,12 +2,15 @@ VERSION v2.2
 CLEARLOG
 LOADCONFIG
 LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+LOADCONFIG "" Config\ETL\Throughput_Assy_Configuration.txt
 
 SETLOG "TP_Module_Data.txt"
 
-COPY $bot_chuck_num 3
+# COPY $bot_chuck_num 3
+FLEXREAD $bot_chuck_num assembly_chuck_number
 #GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
-COPY $top_chuck_num 4
+# COPY $top_chuck_num 4
+FLEXREAD $top_chuck_num staging_chuck_number
 
 SETVAC "etl_chuck_{$bot_chuck_num}" 1  # vacuum for assembly plate
 CALL @MAKE_MODULE 1 $bot_chuck_num $top_chuck_num 1
@@ -37,15 +40,14 @@ END
     SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" 1 #for top piece B
     SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" 1 #for top piece C
     SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
-    
 
     #Survey Module PCB
     MOVENAME "etl_chuck_{$bot_chuck_num}"
     CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
-    MOVENAME "etl_chuck_{$bot_chuck_num}"
+    # MOVENAME "etl_chuck_{$bot_chuck_num}"
 
     #Survey all 4 ETROC - Sensor PCB Sub Assemblies
-    MOVENAME "etl_chuck_{$top_chuck_num}"
+    MOVENAME "etl_chuck_{$top_chuck_num}" "" direct
     CALL @SURVEY_PART $top_chuck_num $topA_pos_num 2 1 -> $topA_pos $topA_rot
     CALL @SURVEY_PART $top_chuck_num $topB_pos_num 2 1 -> $topB_pos $topB_rot
     CALL @SURVEY_PART $top_chuck_num $topC_pos_num 2 1 -> $topC_pos $topC_rot
@@ -144,15 +146,17 @@ END
     RETURN $pos $phi
 
 
-@SURVEY_PART(chuck_num,pos_num,piece,is_top)
+@SURVEY_PART(chuck_num,pos_num,piece,part_id)
     # Arguments:
     #  $chuck_num - 
     #  $pos_num - 
 	   #  $is_top - 1 for survey position of top, 0 for bottom
-	
+	# part_id=1 => Module PCB
+	# part_id=2 => LGAD
+	# part_id=3 => ETROC
     SETLIGHT 40
 	
-	   GOTOIF @LOAD_TOP_DATA $is_top
+	   GOTOIF @LOAD_TOP_DATA `part_id==1`
     FLEXREAD $tr_local geometry.ETL_mock_base.fid_tr  
     FLEXREAD $tl_local geometry.ETL_mock_base.fid_tl
     FLEXREAD $bl_local geometry.ETL_mock_base.fid_bl
