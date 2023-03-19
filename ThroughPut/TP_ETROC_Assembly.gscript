@@ -6,14 +6,14 @@ LOADCONFIG "" Config\ETL\Throughput_Assy_Configuration.txt
 
 SETLOG "TP_Module_Data.txt"
 
-# COPY $bot_chuck_num 3
-FLEXREAD $bot_chuck_num assembly_chuck_number
+FLEXREAD $bot_chuck_num chuck_number.bottom
 #GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
-# COPY $top_chuck_num 4
-FLEXREAD $top_chuck_num staging_chuck_number
+FLEXREAD $top_chuck_num chuck_number.top
 
 SETVAC "etl_chuck_{$bot_chuck_num}" 1  # vacuum for assembly plate
 CALL @MAKE_MODULE 1 $bot_chuck_num $top_chuck_num 1
+#CALL @MAKE_MODULE 3 $bot_chuck_num $top_chuck_num 1
+#CALL @MAKE_MODULE 4 $bot_chuck_num $top_chuck_num 1
 SETVAC "etl_chuck_{$bot_chuck_num}" 0  # vacuum for assembly plate
 
 END
@@ -33,7 +33,8 @@ END
     COPY $topB_pos_num `$bot_pos_num+4`
     COPY $topC_pos_num `$bot_pos_num+8`
     COPY $topD_pos_num `$bot_pos_num+12`
-    COPY $top_thickness {0,0,0.6} #get new thickness of throughput sub assembly
+    FLEXREAD $top_thickness thickness.top
+    
     HOME if-needed
     #set vaccuums
     SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
@@ -43,22 +44,21 @@ END
 
     #Survey Module PCB
     MOVENAME "etl_chuck_{$bot_chuck_num}"
-    CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 0 -> $bot_pos $bot_rot
-    # MOVENAME "etl_chuck_{$bot_chuck_num}"
+    CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 -> $bot_pos $bot_rot
 
     #Survey all 4 ETROC - Sensor PCB Sub Assemblies
     MOVENAME "etl_chuck_{$top_chuck_num}" "" direct
-    CALL @SURVEY_PART $top_chuck_num $topA_pos_num 2 1 -> $topA_pos $topA_rot
-    CALL @SURVEY_PART $top_chuck_num $topB_pos_num 2 1 -> $topB_pos $topB_rot
-    CALL @SURVEY_PART $top_chuck_num $topC_pos_num 2 1 -> $topC_pos $topC_rot
-    CALL @SURVEY_PART $top_chuck_num $topD_pos_num 2 1 -> $topD_pos $topD_rot
+    CALL @SURVEY_PART $top_chuck_num $topA_pos_num 2 -> $topA_pos $topA_rot
+    CALL @SURVEY_PART $top_chuck_num $topB_pos_num 2 -> $topB_pos $topB_rot
+    CALL @SURVEY_PART $top_chuck_num $topC_pos_num 2 -> $topC_pos $topC_rot
+    CALL @SURVEY_PART $top_chuck_num $topD_pos_num 2 -> $topD_pos $topD_rot
     MOVENAME "etl_chuck_{$top_chuck_num}"
 
     #survey the LGAD, NOT IMPLEMENTED FOR FUNCTION DEF NEEDS UPDATE DONT UNCOMMENT NOW
-    #CALL @SURVEY_LGAD $top_chuck_num $topA_pos_num 2 -> $LGAD_A_pos $LGAD_A_rot
-    #CALL @SURVEY_LGAD $top_chuck_num $topB_pos_num 2 -> $LGAD_B_pos $LGAD_B_rot
-    #CALL @SURVEY_LGAD $top_chuck_num $topC_pos_num 2 -> $LGAD_C_pos $LGAD_C_rot
-    #CALL @SURVEY_LGAD $top_chuck_num $topD_pos_num 2 -> $LGAD_D_pos $LGAD_D_rot
+    #CALL @SURVEY_PART $top_chuck_num $topA_pos_num 3 -> $LGAD_A_pos $LGAD_A_rot
+    #CALL @SURVEY_PART $top_chuck_num $topB_pos_num 3 -> $LGAD_B_pos $LGAD_B_rot
+    #CALL @SURVEY_PART $top_chuck_num $topC_pos_num 3 -> $LGAD_C_pos $LGAD_C_rot
+    #CALL @SURVEY_PART $top_chuck_num $topD_pos_num 3 -> $LGAD_D_pos $LGAD_D_rot
     
     #CALL @PRINT_SURVEY_RESULTS $topA_pos $topA_rot $LGAD_A_pos $LGAD_A_rot 1
     #CALL @PRINT_SURVEY_RESULTS $topB_pos $topB_rot $LGAD_B_pos $LGAD_B_rot 2
@@ -66,40 +66,46 @@ END
     #CALL @PRINT_SURVEY_RESULTS $topD_pos $topD_rot $LGAD_D_pos $LGAD_D_rot 4
 
     #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
-    TRANSFORML2G $bot_pos_A {-11.0,-11.05,0}  $bot_pos $bot_rot       
-    TRANSFORML2G $bot_pos_B {11.0,-11.05,0} $bot_pos $bot_rot
-    TRANSFORML2G $bot_pos_C {-11.0,11.05,0}   $bot_pos $bot_rot
-    TRANSFORML2G $bot_pos_D {11.0,11.05,0}  $bot_pos $bot_rot
+
+    FLEXREAD $A geometry.Module_PCB.A
+    FLEXREAD $B geometry.Module_PCB.B
+    FLEXREAD $C geometry.Module_PCB.C
+    FLEXREAD $D geometry.Module_PCB.D
+    TRANSFORML2G $bot_pos_A $A $bot_pos $bot_rot       
+    TRANSFORML2G $bot_pos_B $B $bot_pos $bot_rot
+    TRANSFORML2G $bot_pos_C $C $bot_pos $bot_rot
+    TRANSFORML2G $bot_pos_D $D $bot_pos $bot_rot
 
     #PICK AND PLACE ALL SUB ASSEMBLIES ONTO MODULE PCB
     LOADTOOL etl_picker_tool
-    #THIS IS NOT CORRECT GENERALLY! COULD GO OVER OR UNDER, CREATE SIGN FUCNTION TO FIX
-    ADD $topA_rot $topA_rot -180 #since it is rotated -180 deg on staging area
-    ADD $topB_rot $topB_rot -180 #need to rotate it back 
+    
+    CALL @FIX_ROT $topA_rot -> $topA_rot
+    CALL @FIX_ROT $topB_rot -> $topB_rot
 
-    PICKPART $topA_pos $topA_rot "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" etl_chuck_4
-    PLACEPART $bot_pos_A $topB_rot "" etl_chuck_{$bot_chuck_num}
-    PICKPART $topB_pos $bot_rot_A "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" etl_chuck_4
-    PLACEPART $bot_pos_B $bot_rot_B "" etl_chuck_{$bot_chuck_num}
-    PICKPART $topC_pos $topC_rot "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" etl_chuck_4
-    PLACEPART $bot_pos_C $bot_rot_C "" etl_chuck_{$bot_chuck_num}
-    PICKPART $topD_pos $topD_rot "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" etl_chuck_4
-    PLACEPART $bot_pos_D $bot_rot_D "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topA_pos $topA_rot "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" "etl_chuck_{$top_chuck_num}"
+    PLACEPART $bot_pos_A $bot_rot "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topB_pos $topB_rot "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" "etl_chuck_{$top_chuck_num}"
+    PLACEPART $bot_pos_B $bot_rot "" etl_chuck_{$bot_chuck_num}
+    PICKPART $topC_pos $topC_rot "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" "etl_chuck_{$top_chuck_num}"
+    PLACEPART $bot_pos_C $bot_rot"" etl_chuck_{$bot_chuck_num}
+    PICKPART $topD_pos $topD_rot "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" "etl_chuck_{$top_chuck_num}"
+    PLACEPART $bot_pos_D $bot_rot "" etl_chuck_{$bot_chuck_num}
+
     UNLOADTOOL
 
-    GOTOIF @NOPRINT $print_results
+    GOTOIFN @NOPRINT $print_results
     MOVENAME "etl_chuck_{$bot_chuck_num}"
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot_A 1 0 -> $pos_corr_A $rot_corr_A
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot_A $pos_corr_A $rot_corr_A 1
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot -> $pos_corr_A $rot_corr_A
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot $pos_corr_A $rot_corr_A 1
 
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot_B 1 0 -> $pos_corr_B $rot_corr_B
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot_B $pos_corr_B $rot_corr_B 2
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot -> $pos_corr_B $rot_corr_B
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot $pos_corr_B $rot_corr_B 2
 
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot_C 1 0 -> $pos_corr_C $rot_corr_C
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot_C $pos_corr_C $rot_corr_C 3
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot -> $pos_corr_C $rot_corr_C
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot $pos_corr_C $rot_corr_C 3
 
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot_D 1 0 -> $pos_corr_D $rot_corr_D
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot_D $pos_corr_D $rot_corr_D 4
+    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot -> $pos_corr_D $rot_corr_D
+    CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot $pos_corr_D $rot_corr_D 4
     @NOPRINT
     RETURN
 
@@ -112,70 +118,81 @@ END
     PRINT "    delta:  %v | %f deg" $pos_err $rot_err
     RETURN
 
-@SURVEY_CORRECTED(chuck_num,target_pos,target_rot,piece)
+@SURVEY_CORRECTED(chuck_num,target_pos,target_rot)
 # Arguments:
     #  $chuck_num - 
     #  $pos - 
     #  $rot -
     #  $piece -
+    FLEXREAD $tr_local geometry.ETROC.fid_tr  
+    FLEXREAD $tl_local geometry.ETROC.fid_tl
+    FLEXREAD $bl_local geometry.ETROC.fid_bl
+    FLEXREAD $br_local geometry.ETROC.fid_br 
 
-    FLEXREAD $tr_local geometry.ETL_Sensor_PCB_Mockup.fid_tr  
-    FLEXREAD $tl_local geometry.ETL_Sensor_PCB_Mockup.fid_tl
-    FLEXREAD $bl_local geometry.ETL_Sensor_PCB_Mockup.fid_bl
-    FLEXREAD $br_local geometry.ETL_Sensor_PCB_Mockup.fid_br 
-    
     TRANSFORML2G $tr_global $tr_local $target_pos $target_rot
     TRANSFORML2G $tl_global $tl_local $target_pos $target_rot
     TRANSFORML2G $bl_global $bl_local $target_pos $target_rot
     TRANSFORML2G $br_global $br_local $target_pos $target_rot
 
     #this is to get corrected centers and orientation, the code above gives general area
-    #MOVENAME "etl_chuck_{$chuck_num}"
     #Routine to set up inital position of metal piece
     COPY $tr 1
     COPY $br 2
     COPY $bl 3
     COPY $tl 4
-    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
-    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
-    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
-    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
+    CALL @ACQUIREFIDUCIAL $tl_global 2 $tl -> $tl_corrected #part_id always 2 since this is for misalignment
+    CALL @ACQUIREFIDUCIAL $tr_global 2 $tr -> $tr_corrected #between ETROC and Module PCB
+    CALL @ACQUIREFIDUCIAL $bl_global 2 $bl -> $bl_corrected
+    CALL @ACQUIREFIDUCIAL $br_global 2 $br -> $br_corrected
 
-	   FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
 
-
-@SURVEY_PART(chuck_num,pos_num,piece,part_id)
+@SURVEY_PART(chuck_num,pos_num,part_id)
     # Arguments:
     #  $chuck_num - 
     #  $pos_num - 
-	   #  $is_top - 1 for survey position of top, 0 for bottom
-	# part_id=1 => Module PCB
-	# part_id=2 => LGAD
-	# part_id=3 => ETROC
+	   #  part_id=1 => Module PCB
+   	#  part_id=2 => ETROC
+	   #  part_id=3 => LGAD
+
     SETLIGHT 40
-	
-	   GOTOIF @LOAD_TOP_DATA `part_id==1`
-    FLEXREAD $tr_local geometry.ETL_mock_base.fid_tr  
-    FLEXREAD $tl_local geometry.ETL_mock_base.fid_tl
-    FLEXREAD $bl_local geometry.ETL_mock_base.fid_bl
-    FLEXREAD $br_local geometry.ETL_mock_base.fid_br
 
-    FLEXREAD $pos_default "default.ETL_mock_base.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.ETL_mock_base.{$chuck_num}.{$pos_num}.rot"
+	   GOTOIF @LOAD_MODULE_PCB `$part_id==1`
+    GOTOIF @LOAD_ETROC `$part_id==2`
+    GOTOIF @LOAD_LGAD `$part_id==3`
+	
+	   @LOAD_MODULE_PCB
+    FLEXREAD $tr_local geometry.Module_PCB.fid_tr  
+    FLEXREAD $tl_local geometry.Module_PCB.fid_tl
+    FLEXREAD $bl_local geometry.Module_PCB.fid_bl
+    FLEXREAD $br_local geometry.Module_PCB.fid_br
+
+    FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
     GOTO @END_LOAD
-	
-	   @LOAD_TOP_DATA
-    FLEXREAD $tr_local geometry.ETL_Sensor_PCB_Mockup.fid_tr  
-    FLEXREAD $tl_local geometry.ETL_Sensor_PCB_Mockup.fid_tl
-    FLEXREAD $bl_local geometry.ETL_Sensor_PCB_Mockup.fid_bl
-    FLEXREAD $br_local geometry.ETL_Sensor_PCB_Mockup.fid_br
 
-    FLEXREAD $pos_default "default.ETL_Sensor_PCB_Mockup.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.ETL_Sensor_PCB_Mockup.{$chuck_num}.{$pos_num}.rot"
+    @LOAD_ETROC
+    FLEXREAD $tr_local geometry.ETROC.fid_tr  
+    FLEXREAD $tl_local geometry.ETROC.fid_tl
+    FLEXREAD $bl_local geometry.ETROC.fid_bl
+    FLEXREAD $br_local geometry.ETROC.fid_br
+
+    FLEXREAD $pos_default "default.ETROC.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.ETROC.{$chuck_num}.{$pos_num}.rot"
+    GOTO @END_LOAD
+    
+    @LOAD_LGAD
+	   FLEXREAD $tr_local geometry.LGAD.fid_tr  
+    FLEXREAD $tl_local geometry.LGAD.fid_tl
+    FLEXREAD $bl_local geometry.LGAD.fid_bl
+    FLEXREAD $br_local geometry.LGAD.fid_br
+
+    FLEXREAD $pos_default "default.LGAD.{$chuck_num}.{$pos_num}.pos"
+    FLEXREAD $rot_default "default.LGAD.{$chuck_num}.{$pos_num}.rot"
     @END_LOAD
-	
+
     #converts the local coordinates to global gantry coordinates usint start location and orientation
     TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
     TRANSFORML2G $tl_global $tl_local $pos_default $rot_default
@@ -183,68 +200,35 @@ END
     TRANSFORML2G $br_global $br_local $pos_default $rot_default
 
     #this is to get corrected centers and orientation, the code above gives general area
-    #MOVENAME "etl_chuck_{$chuck_num}"
-    #Routine to set up inital position of metal piece
 
     COPY $tr 1
     COPY $br 2
     COPY $bl 3
     COPY $tl 4
-    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
-    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
-    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
-    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
+    CALL @ACQUIREFIDUCIAL $tl_global $part_id $tl -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $tr_global $part_id $tr -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $part_id $bl -> $bl_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $part_id $br -> $br_corrected
 
     # Turns measured corners or fiducials into center and orientation
-	   GOTOIFN @FIT_TOP $is_top
-    FIT $pos $rot ETL_Sensor_PCB_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
+	   GOTOIF @FIT_MODULE_PCB `$part_id==1`
+    GOTOIF @FIT_ETROC `$part_id==2`
+    GOTOIF @FIT_LGAD `$part_id==3`
+
+	   @FIT_MODULE_PCB
+    FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
     GOTO @FINISH_SURVEY
-	   @FIT_TOP
-	   FIT $pos $rot ETL_mock_base $tr_corrected $br_corrected $bl_corrected $tl_corrected
+	   @FIT_ETROC
+	   FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
+    GOTO @FINISH_SURVEY
+    @FIT_LGAD
+    FIT $pos $rot LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
+
     @FINISH_SURVEY
     QUAT2EULER $phi $_ $_ $rot
     RETURN $pos $phi
 
-@SURVEY_LGAD(chuck_num,pos_num,piece)
-    # Arguments:
-    #  $chuck_num - 
-    #  $pos_num - 
-	
-    SETLIGHT 40
-	
-    FLEXREAD $tr_local geometry.ETL_LGAD_Mockup.fid_tr  
-    FLEXREAD $tl_local geometry.ETL_LGAD_Mockup.fid_tl
-    FLEXREAD $bl_local geometry.ETL_LGAD_Mockup.fid_bl
-    FLEXREAD $br_local geometry.ETL_LGAD_Mockup.fid_br
-
-    FLEXREAD $pos_default "default.ETL_LGAD_Mockup.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.ETL_LGAD_Mockup.{$chuck_num}.{$pos_num}.rot"
-	
-    #converts the local coordinates to global gantry coordinates usint start location and orientation
-    TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
-    TRANSFORML2G $tl_global $tl_local $pos_default $rot_default
-    TRANSFORML2G $bl_global $bl_local $pos_default $rot_default
-    TRANSFORML2G $br_global $br_local $pos_default $rot_default
-
-    #this is to get corrected centers and orientation, the code above gives general area
-    #MOVENAME "etl_chuck_{$chuck_num}"
-    #Routine to set up inital position of metal piece
-
-    COPY $tr 1
-    COPY $br 2
-    COPY $bl 3
-    COPY $tl 4
-    CALL @ACQUIREFIDUCIAL $tl_global $piece $tl -> $tl_corrected
-    CALL @ACQUIREFIDUCIAL $tr_global $piece $tr -> $tr_corrected
-    CALL @ACQUIREFIDUCIAL $bl_global $piece $bl -> $bl_corrected
-    CALL @ACQUIREFIDUCIAL $br_global $piece $br -> $br_corrected
-
-    # Turns measured corners or fiducials into center and orientation
-    FIT $pos $rot ETL_LGAD_Mockup $tr_corrected $br_corrected $bl_corrected $tl_corrected
-    QUAT2EULER $phi $_ $_ $rot
-    RETURN $pos $phi
-
-@ACQUIREFIDUCIAL(start_pos,piece,loc)
+@ACQUIREFIDUCIAL(start_pos,part_id,loc)
     # Arguments:
     #  $start_pos - Position to initially search for the fiducial
 	   #  $piece - PCB or ETROC, 1 or 2 respectively
@@ -265,3 +249,23 @@ END
     VIDEO
     getpos $fid_position
     RETURN $fid_position
+
+@FIX_ROT(rot)
+    #Arguments:
+    #  rot - rotation that needs to be fixed due to calculation falling outside atan2's range
+    
+    INVERT $q $rot
+    ABS $q $q      #get rid of minus sign, so when mult you dont do a negative*negative
+    MUL $q $q $rot 
+    ADD $q $q 1    #should be 0 or 2, 0 for negative, 2 for positive
+
+    GOTOIF @POS $q
+    ADD $fixed_rot $rot 180 #not positive so add 180
+    GOTO @DONE
+
+    @POS
+    SUB $fixed_rot $rot 180 #This is positive so subtract 0
+    GOTO @DONE
+
+    @DONE
+    return $fixed_rot

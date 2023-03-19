@@ -5,16 +5,16 @@
 
 #tr == 1, br == 2, bl == 3, tl == 4
 #Throughput ETROC geometries 
-geometry.ETL_Sensor_PCB_Mockup.fid_tr: {9.5,-9.75,0}
-geometry.ETL_Sensor_PCB_Mockup.fid_tl: {-9.5,-9.75,0}
-geometry.ETL_Sensor_PCB_Mockup.fid_bl: {-9.5,9.75,0}
-geometry.ETL_Sensor_PCB_Mockup.fid_br: {9.5,9.75,0}
+geometry.ETROC.fid_tr: {9.5,-9.75,0}
+geometry.ETROC.fid_tl: {-9.5,-9.75,0}
+geometry.ETROC.fid_bl: {-9.5,9.75,0}
+geometry.ETROC.fid_br: {9.5,9.75,0}
 
 #Throughput LGAD geometries (-90 rot when on chuck, arrow facing down)
-geometry.ETL_LGAD_Mockup.fid_tr: {9.7,0,0}
-geometry.ETL_LGAD_Mockup.fid_tl: {0,-9.8,0}
-geometry.ETL_LGAD_Mockup.fid_bl: {-9.7,0,0}
-geometry.ETL_LGAD_Mockup.fid_br: {0,9.8,0}
+geometry.LGAD.fid_tr: {9.7,0,0}
+geometry.LGAD.fid_tl: {0,-9.8,0}
+geometry.LGAD.fid_bl: {-9.7,0,0}
+geometry.LGAD.fid_br: {0,9.8,0}
 
 #geometry of throughput baseplate 
 geometry.ETL_AlN_Baseplate.fid_tr: {20.05,-28.75,0}
@@ -23,10 +23,18 @@ geometry.ETL_AlN_Baseplate.fid_bl: {-22.05,28.75,0}
 geometry.ETL_AlN_Baseplate.fid_br: {22.05,28.75,0}
 
 #throuhput PCB geometries
-geometry.ETL_mock_base.fid_tr: {19.55,-26.741,0}
-geometry.ETL_mock_base.fid_tl: {-19.55,-26.741,0}
-geometry.ETL_mock_base.fid_bl: {-19.55,26.741,0}
-geometry.ETL_mock_base.fid_br: {19.55,26.741,0}
+geometry.Module_PCB.fid_tr: {19.55,-26.741,0}
+geometry.Module_PCB.fid_tl: {-19.55,-26.741,0}
+geometry.Module_PCB.fid_bl: {-19.55,26.741,0}
+geometry.Module_PCB.fid_br: {19.55,26.741,0}
+
+#relative positions of where the sub-assemblies will go on the Module PCB
+geometry.Module_PCB.A: {-11.0,-11.05,0}
+geometry.Module_PCB.B: {11.0,-11.05,0}
+geometry.Module_PCB.C: {-11.0,11.05,0}
+geometry.Module_PCB.D: {11.0,11.05,0}
+
+thickness.top: {0,0,0.6}
 
 #Pattern Recognition Parameters
 vision.etl_throughput_etroc.method: find_patches
