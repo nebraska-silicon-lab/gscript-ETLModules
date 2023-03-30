@@ -1,113 +1,159 @@
+# We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
+# on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
+# positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
+
 VERSION v2.2
 CLEARLOG
 LOADCONFIG
 LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\Throughput_Assy_Configuration.txt
 
-SETLOG "TP_Module_Data.txt"
+SETLOG "TP_Module_Data_{timestamp}.txt"
 
-FLEXREAD $bot_chuck_num chuck_number.bottom
-#GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
-FLEXREAD $top_chuck_num chuck_number.top
+DIALOG Scripts\ETLModules\Throughput\Setup_Dialog.ini
+FLEXWRITE enabled_1 $enabled_1
+FLEXWRITE id_1 $id_1
+FLEXWRITE enabled_2 $enabled_2
+FLEXWRITE id_2 $id_2
+FLEXWRITE enabled_3 $enabled_3
+FLEXWRITE id_3 $id_3
+FLEXWRITE enabled_4 $enabled_4
+FLEXWRITE id_4 $id_4
 
-SETVAC "etl_chuck_{$bot_chuck_num}" 1  # vacuum for assembly plate
-CALL @MAKE_MODULE 1 $bot_chuck_num $top_chuck_num 1
-#CALL @MAKE_MODULE 3 $bot_chuck_num $top_chuck_num 1
-#CALL @MAKE_MODULE 4 $bot_chuck_num $top_chuck_num 1
-SETVAC "etl_chuck_{$bot_chuck_num}" 0  # vacuum for assembly plate
+FLEXREAD $etroc_chuck_num chuck_number.top
 
+HOME if-needed
+
+PRINT "Assembly Start"
+
+SETVAC "etl_chuck_{$pcb_chuck_num}" 1  # vacuum for assembly plate
+MOVENAME "etl_chuck_{$pcb_chuck_num}"
+
+FLEXREAD $local_A geometry.Module_PCB.A
+FLEXREAD $local_B geometry.Module_PCB.B
+FLEXREAD $local_C geometry.Module_PCB.C
+FLEXREAD $local_D geometry.Module_PCB.D
+COPY $mod_idx 0
+@PCB_SURVEY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @PCB_SURVEY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @PCB_SURVEY_LOOP_START $enabled
+    FLEXREAD $mod_id "id_{$mod_idx}"
+    PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx $mod_id
+
+    CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
+    FLEXWRITE "pcb_init_pos_{$mod_idx}" $pos
+    FLEXWRITE "pcb_init_rot_{$mod_idx}" $rot
+
+    TRANSFORML2G $target_A $local_A $pos $rot       
+    FLEXWRITE "etroc_target_pos_{$mod_idx}_1" $target_A
+    TRANSFORML2G $target_B $local_B $pos $rot
+    FLEXWRITE "etroc_target_pos_{$mod_idx}_2" $target_B
+    TRANSFORML2G $target_C $local_C $pos $rot
+    FLEXWRITE "etroc_target_pos_{$mod_idx}_3" $target_C
+    TRANSFORML2G $target_D $local_D $pos $rot
+    FLEXWRITE "etroc_target_pos_{$mod_idx}_4" $target_D
+
+    GOTO @PCB_SURVEY_LOOP_START
+@PCB_SURVEY_LOOP_END
+
+MOVENAME "etl_chuck_{$etroc_chuck_num}"
+
+COPY $mod_idx 0
+@ETROC_SURVEY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @ETROC_SURVEY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @ETROC_SURVEY_LOOP_START $enabled
+    FLEXREAD $mod_id "id_{$mod_idx}"
+    PRINT "Begin Survey of ETROCs for Module %d, ID=%d" $mod_idx $mod_id
+
+    COPY $chip_idx $mod_idx
+    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
+    CALL @FIX_ROT $rot -> $rot
+    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
+    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
+    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_1" $chip_idx
+    
+    COPY $chip_idx `$mod_idx+4` 
+    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
+    CALL @FIX_ROT $rot -> $rot
+    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
+    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
+    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_2" $chip_idx
+
+    COPY $chip_idx `$mod_idx+8` 
+    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
+    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
+    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
+    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_3" $chip_idx
+
+    COPY $chip_idx `$mod_idx+12` 
+    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
+    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
+    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
+    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_4" $chip_idx
+    GOTO @ETROC_SURVEY_LOOP_START
+@ETROC_SURVEY_LOOP_END
+
+LOADTOOL etl_picker_tool
+
+COPY $mod_idx 0
+@ASSY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @ASSY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @ASSY_LOOP_START $enabled
+    FLEXREAD $mod_id "id_{$mod_idx}"
+    PRINT "Begin pick-and-place for Module %d, ID=%d" $mod_idx $mod_id
+
+    CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 1    
+    CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 2    
+    CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 3    
+    CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 4    
+
+    GOTO @ASSY_LOOP_START
+@ASSY_LOOP_END
+
+UNLOADTOOL
+
+SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
+
+PRINT "Assembly Completed"
+MOVENAME home
 END
 
 
-@MAKE_MODULE(bot_pos_num,bot_chuck_num,top_chuck_num,print_results)
+@PICK_AND_PLACE(pcb_chuck_num,pcb_pos_num,etroc_chuck_num,etroc_pos_num)
 #Arguments
-#    bot_pos_num = position number of the Module PCB, we infer the ETROC+LGAD subassembly positions from this number
-#    bot_chuck_num = chuck number of the Module PCB
-#    top_chuck_num = chuck number of ETROC+LGAD subasssemblies
-#    print_results = 0 for dont get placement data and 1 to get placement data
-
-# We assume that assembly on Module PCB position 1 will use ETROC+LGAD subassemblies
-# on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
-# positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
-    COPY $topA_pos_num $bot_pos_num
-    COPY $topB_pos_num `$bot_pos_num+4`
-    COPY $topC_pos_num `$bot_pos_num+8`
-    COPY $topD_pos_num `$bot_pos_num+12`
+#    pcb_chuck_num = chuck number of the Module PCB
+#    pcb_pos_num = position number of the Module PCB
+#    etroc_chuck_num = chuck number of ETROC+LGAD subasssemblies
+#    etroc_pos_num = position on the module PCB (1-4)
     FLEXREAD $top_thickness thickness.top
-    
-    HOME if-needed
-    #set vaccuums
-    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" 1 #for top piece A
-    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" 1 #for top piece B
-    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" 1 #for top piece C
-    SETVAC "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" 1 #for top piece D
-
-    #Survey Module PCB
-    MOVENAME "etl_chuck_{$bot_chuck_num}"
-    CALL @SURVEY_PART $bot_chuck_num $bot_pos_num 1 -> $bot_pos $bot_rot
-
-    #Survey all 4 ETROC - Sensor PCB Sub Assemblies
-    MOVENAME "etl_chuck_{$top_chuck_num}" "" direct
-    CALL @SURVEY_PART $top_chuck_num $topA_pos_num 2 -> $topA_pos $topA_rot
-    CALL @SURVEY_PART $top_chuck_num $topB_pos_num 2 -> $topB_pos $topB_rot
-    CALL @SURVEY_PART $top_chuck_num $topC_pos_num 2 -> $topC_pos $topC_rot
-    CALL @SURVEY_PART $top_chuck_num $topD_pos_num 2 -> $topD_pos $topD_rot
-    MOVENAME "etl_chuck_{$top_chuck_num}"
-
-    #survey the LGAD, NOT IMPLEMENTED FOR FUNCTION DEF NEEDS UPDATE DONT UNCOMMENT NOW
-    #CALL @SURVEY_PART $top_chuck_num $topA_pos_num 3 -> $LGAD_A_pos $LGAD_A_rot
-    #CALL @SURVEY_PART $top_chuck_num $topB_pos_num 3 -> $LGAD_B_pos $LGAD_B_rot
-    #CALL @SURVEY_PART $top_chuck_num $topC_pos_num 3 -> $LGAD_C_pos $LGAD_C_rot
-    #CALL @SURVEY_PART $top_chuck_num $topD_pos_num 3 -> $LGAD_D_pos $LGAD_D_rot
-    
-    #CALL @PRINT_SURVEY_RESULTS $topA_pos $topA_rot $LGAD_A_pos $LGAD_A_rot 1
-    #CALL @PRINT_SURVEY_RESULTS $topB_pos $topB_rot $LGAD_B_pos $LGAD_B_rot 2
-    #CALL @PRINT_SURVEY_RESULTS $topC_pos $topC_rot $LGAD_C_pos $LGAD_C_rot 3
-    #CALL @PRINT_SURVEY_RESULTS $topD_pos $topD_rot $LGAD_D_pos $LGAD_D_rot 4
 
     #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
 
-    FLEXREAD $A geometry.Module_PCB.A
-    FLEXREAD $B geometry.Module_PCB.B
-    FLEXREAD $C geometry.Module_PCB.C
-    FLEXREAD $D geometry.Module_PCB.D
-    TRANSFORML2G $bot_pos_A $A $bot_pos $bot_rot       
-    TRANSFORML2G $bot_pos_B $B $bot_pos $bot_rot
-    TRANSFORML2G $bot_pos_C $C $bot_pos $bot_rot
-    TRANSFORML2G $bot_pos_D $D $bot_pos $bot_rot
+    FLEXREAD $pcb_pos "pcb_init_pos_{$pcb_pos_num}"
+    FLEXREAD $pcb_rot "pcb_init_rot_{$pcb_pos_num}"
+    FLEXREAD $etroc_init_pos_num "etroc_init_pos_num_{$pcb_pos_num}_{$etroc_pos_num}"
+    FLEXREAD $etroc_init_pos "etroc_init_pos_{$etroc_init_pos_num}"
+    FLEXREAD $etroc_init_rot "etroc_init_rot_{$etroc_init_pos_num}"
 
-    #PICK AND PLACE ALL SUB ASSEMBLIES ONTO MODULE PCB
-    LOADTOOL etl_picker_tool
-    
-    CALL @FIX_ROT $topA_rot -> $topA_rot
-    CALL @FIX_ROT $topB_rot -> $topB_rot
+    FLEXREAD $etroc_target_pos "etroc_target_pos_{$pcb_pos_num}_{$etroc_pos_num}"
 
-    PICKPART $topA_pos $topA_rot "etl_chuck_{$top_chuck_num}_pos_{$topA_pos_num}" "etl_chuck_{$top_chuck_num}"
-    PLACEPART $bot_pos_A $bot_rot "" etl_chuck_{$bot_chuck_num}
-    PICKPART $topB_pos $topB_rot "etl_chuck_{$top_chuck_num}_pos_{$topB_pos_num}" "etl_chuck_{$top_chuck_num}"
-    PLACEPART $bot_pos_B $bot_rot "" etl_chuck_{$bot_chuck_num}
-    PICKPART $topC_pos $topC_rot "etl_chuck_{$top_chuck_num}_pos_{$topC_pos_num}" "etl_chuck_{$top_chuck_num}"
-    PLACEPART $bot_pos_C $bot_rot"" etl_chuck_{$bot_chuck_num}
-    PICKPART $topD_pos $topD_rot "etl_chuck_{$top_chuck_num}_pos_{$topD_pos_num}" "etl_chuck_{$top_chuck_num}"
-    PLACEPART $bot_pos_D $bot_rot "" etl_chuck_{$bot_chuck_num}
+    MOVENAME "etl_chuck_{$etroc_chuck_num}" "" direct
+    PICKPART $etroc_init_pos $etroc_init_rot "etl_chuck_{$etroc_chuck_num}_pos_{$etroc_init_pos_num}"
+    MOVENAME "etl_chuck_{$pcb_chuck_num}" "" direct
+    PLACEPART $etroc_target_pos $pcb_rot
 
-    UNLOADTOOL
-
-    GOTOIFN @NOPRINT $print_results
-    MOVENAME "etl_chuck_{$bot_chuck_num}"
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_A $bot_rot -> $pos_corr_A $rot_corr_A
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_A $bot_rot $pos_corr_A $rot_corr_A 1
-
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_B $bot_rot -> $pos_corr_B $rot_corr_B
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_B $bot_rot $pos_corr_B $rot_corr_B 2
-
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_C $bot_rot -> $pos_corr_C $rot_corr_C
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_C $bot_rot $pos_corr_C $rot_corr_C 3
-
-    CALL @SURVEY_CORRECTED $bot_chuck_num $bot_pos_D $bot_rot -> $pos_corr_D $rot_corr_D
-    CALL @PRINT_SURVEY_RESULTS $bot_pos_D $bot_rot $pos_corr_D $rot_corr_D 4
-    @NOPRINT
     RETURN
+
 
 @PRINT_SURVEY_RESULTS(target_pos,target_rot,meas_pos,meas_rot,chip_num)
     PRINT "CHIP %d:" $chip_num
@@ -118,80 +164,79 @@ END
     PRINT "    delta:  %v | %f deg" $pos_err $rot_err
     RETURN
 
-@SURVEY_CORRECTED(chuck_num,target_pos,target_rot)
-# Arguments:
-    #  $chuck_num - 
-    #  $pos - 
-    #  $rot -
-    #  $piece -
-    FLEXREAD $tr_local geometry.ETROC.fid_tr  
-    FLEXREAD $tl_local geometry.ETROC.fid_tl
-    FLEXREAD $bl_local geometry.ETROC.fid_bl
-    FLEXREAD $br_local geometry.ETROC.fid_br 
 
-    TRANSFORML2G $tr_global $tr_local $target_pos $target_rot
-    TRANSFORML2G $tl_global $tl_local $target_pos $target_rot
-    TRANSFORML2G $bl_global $bl_local $target_pos $target_rot
-    TRANSFORML2G $br_global $br_local $target_pos $target_rot
-
-    #this is to get corrected centers and orientation, the code above gives general area
-    #Routine to set up inital position of metal piece
-    COPY $tr 1
-    COPY $br 2
-    COPY $bl 3
-    COPY $tl 4
-    CALL @ACQUIREFIDUCIAL $tl_global 2 $tl -> $tl_corrected #part_id always 2 since this is for misalignment
-    CALL @ACQUIREFIDUCIAL $tr_global 2 $tr -> $tr_corrected #between ETROC and Module PCB
-    CALL @ACQUIREFIDUCIAL $bl_global 2 $bl -> $bl_corrected
-    CALL @ACQUIREFIDUCIAL $br_global 2 $br -> $br_corrected
-
-    FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
-    QUAT2EULER $phi $_ $_ $rot
-    RETURN $pos $phi
-
-@SURVEY_PART(chuck_num,pos_num,part_id)
+@SURVEY_PART_FROM_CONFIG(chuck_num,pos_num,part_id)
     # Arguments:
     #  $chuck_num - 
     #  $pos_num - 
-	   #  part_id=1 => Module PCB
-   	#  part_id=2 => ETROC
-	   #  part_id=3 => LGAD
+    #   part_id=1 => Module PCB
+    #   part_id=2 => ETROC
+    #   part_id=3 => LGAD
+    # Returns
+    #  $pos - center of part
+    #  $phi - rotation of part in x-y plane
 
     SETLIGHT 40
 
-	   GOTOIF @LOAD_MODULE_PCB `$part_id==1`
-    GOTOIF @LOAD_ETROC `$part_id==2`
-    GOTOIF @LOAD_LGAD `$part_id==3`
-	
-	   @LOAD_MODULE_PCB
-    FLEXREAD $tr_local geometry.Module_PCB.fid_tr  
-    FLEXREAD $tl_local geometry.Module_PCB.fid_tl
-    FLEXREAD $bl_local geometry.Module_PCB.fid_bl
-    FLEXREAD $br_local geometry.Module_PCB.fid_br
-
-    FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
-    GOTO @END_LOAD
-
-    @LOAD_ETROC
-    FLEXREAD $tr_local geometry.ETROC.fid_tr  
-    FLEXREAD $tl_local geometry.ETROC.fid_tl
-    FLEXREAD $bl_local geometry.ETROC.fid_bl
-    FLEXREAD $br_local geometry.ETROC.fid_br
-
-    FLEXREAD $pos_default "default.ETROC.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.ETROC.{$chuck_num}.{$pos_num}.rot"
-    GOTO @END_LOAD
+    GOTOIF @SPC_MODULE_PCB `$part_id==1`
+    GOTOIF @SPC_ETROC `$part_id==2`
+    GOTOIF @SPC_LGAD `$part_id==3`
     
-    @LOAD_LGAD
-	   FLEXREAD $tr_local geometry.LGAD.fid_tr  
-    FLEXREAD $tl_local geometry.LGAD.fid_tl
-    FLEXREAD $bl_local geometry.LGAD.fid_bl
-    FLEXREAD $br_local geometry.LGAD.fid_br
+    @SPC_MODULE_PCB
+      FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
+      FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
+    GOTO @SPC_END_LOAD
 
-    FLEXREAD $pos_default "default.LGAD.{$chuck_num}.{$pos_num}.pos"
-    FLEXREAD $rot_default "default.LGAD.{$chuck_num}.{$pos_num}.rot"
-    @END_LOAD
+    @SPC_ETROC
+      FLEXREAD $pos_default "default.ETROC.{$chuck_num}.{$pos_num}.pos"
+      FLEXREAD $rot_default "default.ETROC.{$chuck_num}.{$pos_num}.rot"
+    GOTO @SPC_END_LOAD
+    
+    @SPC_LGAD
+      FLEXREAD $pos_default "default.LGAD.{$chuck_num}.{$pos_num}.pos"
+      FLEXREAD $rot_default "default.LGAD.{$chuck_num}.{$pos_num}.rot"
+    @SPC_END_LOAD
+
+    CALL @SURVEY_PART $pos_default $rot_default $part_id -> $pos $phi
+    RETURN $pos $phi
+
+
+@SURVEY_PART(pos_default,rot_default,part_id)
+    # Arguments:
+    #  $chuck_num - 
+    #  $pos_num - 
+    #   part_id=1 => Module PCB
+    #   part_id=2 => ETROC
+    #   part_id=3 => LGAD
+    # Returns
+    #  $pos - center of part
+    #  $phi - rotation of part in x-y plane
+
+    GOTOIF @SP_MODULE_PCB `$part_id==1`
+    GOTOIF @SP_ETROC `$part_id==2`
+    GOTOIF @SP_LGAD `$part_id==3`
+    
+    @SP_MODULE_PCB
+      FLEXREAD $tr_local geometry.Module_PCB.fid_tr  
+      FLEXREAD $tl_local geometry.Module_PCB.fid_tl
+      FLEXREAD $bl_local geometry.Module_PCB.fid_bl
+      FLEXREAD $br_local geometry.Module_PCB.fid_br
+    GOTO @SP_END_LOAD
+
+    @SP_ETROC
+      FLEXREAD $tr_local geometry.ETROC.fid_tr  
+      FLEXREAD $tl_local geometry.ETROC.fid_tl
+      FLEXREAD $bl_local geometry.ETROC.fid_bl
+      FLEXREAD $br_local geometry.ETROC.fid_br
+    GOTO @SP_END_LOAD
+    
+    @SP_LGAD
+      FLEXREAD $tr_local geometry.LGAD.fid_tr  
+      FLEXREAD $tl_local geometry.LGAD.fid_tl
+      FLEXREAD $bl_local geometry.LGAD.fid_bl
+      FLEXREAD $br_local geometry.LGAD.fid_br
+    @SP_END_LOAD
+
 
     #converts the local coordinates to global gantry coordinates usint start location and orientation
     TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
@@ -200,29 +245,24 @@ END
     TRANSFORML2G $br_global $br_local $pos_default $rot_default
 
     #this is to get corrected centers and orientation, the code above gives general area
-
-    COPY $tr 1
-    COPY $br 2
-    COPY $bl 3
-    COPY $tl 4
-    CALL @ACQUIREFIDUCIAL $tl_global $part_id $tl -> $tl_corrected
-    CALL @ACQUIREFIDUCIAL $tr_global $part_id $tr -> $tr_corrected
-    CALL @ACQUIREFIDUCIAL $bl_global $part_id $bl -> $bl_corrected
-    CALL @ACQUIREFIDUCIAL $br_global $part_id $br -> $br_corrected
+    CALL @ACQUIREFIDUCIAL $tr_global $part_id 1 -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $part_id 2 -> $br_corrected
+    CALL @ACQUIREFIDUCIAL $tl_global $part_id 4 -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $part_id 3 -> $bl_corrected
 
     # Turns measured corners or fiducials into center and orientation
-	   GOTOIF @FIT_MODULE_PCB `$part_id==1`
+    GOTOIF @FIT_MODULE_PCB `$part_id==1`
     GOTOIF @FIT_ETROC `$part_id==2`
     GOTOIF @FIT_LGAD `$part_id==3`
 
-	   @FIT_MODULE_PCB
-    FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
-    GOTO @FINISH_SURVEY
-	   @FIT_ETROC
-	   FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
-    GOTO @FINISH_SURVEY
+    @FIT_MODULE_PCB
+      FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      GOTO @FINISH_SURVEY
+    @FIT_ETROC
+      FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      GOTO @FINISH_SURVEY
     @FIT_LGAD
-    FIT $pos $rot LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
 
     @FINISH_SURVEY
     QUAT2EULER $phi $_ $_ $rot
@@ -231,14 +271,14 @@ END
 @ACQUIREFIDUCIAL(start_pos,part_id,loc)
     # Arguments:
     #  $start_pos - Position to initially search for the fiducial
-	   #  $piece - PCB or ETROC, 1 or 2 respectively
+    #  $piece - PCB or ETROC, 1 or 2 respectively
     #  $loc - tr == 1, br == 2, bl == 3, tl == 4
     MOVETO $start_pos 50
-    WAIT 100
 
-    # GOTO @manual_fiducial_acquisition
+    GOTO @manual_fiducial_acquisition
 
     SETERRORMODE setvar
+    WAIT 100
     FINDFID $fid_position etl_throughput_etroc
     GOTOIF @manual_fiducial_acquisition $ERR
     SETERRORMODE default
@@ -246,26 +286,20 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    VIDEO
+    # VIDEO
     getpos $fid_position
     RETURN $fid_position
+
 
 @FIX_ROT(rot)
     #Arguments:
     #  rot - rotation that needs to be fixed due to calculation falling outside atan2's range
-    
-    INVERT $q $rot
-    ABS $q $q      #get rid of minus sign, so when mult you dont do a negative*negative
-    MUL $q $q $rot 
-    ADD $q $q 1    #should be 0 or 2, 0 for negative, 2 for positive
-
-    GOTOIF @POS $q
-    ADD $fixed_rot $rot 180 #not positive so add 180
-    GOTO @DONE
+    GOTOIF @POS `$rot>=0`
+    ADD $rot $rot 180 #not positive so add 180
+    RETURN $rot
 
     @POS
-    SUB $fixed_rot $rot 180 #This is positive so subtract 0
-    GOTO @DONE
+    SUB $rot $rot 180 #This is positive so subtract 180
+    RETURN $rot
 
-    @DONE
-    return $fixed_rot
+
