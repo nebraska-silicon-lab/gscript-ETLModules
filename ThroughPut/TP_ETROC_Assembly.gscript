@@ -275,7 +275,7 @@ END
     #  $loc - tr == 1, br == 2, bl == 3, tl == 4
     MOVETO $start_pos 50
 
-    GOTO @manual_fiducial_acquisition
+    # GOTO @manual_fiducial_acquisition
 
     SETERRORMODE setvar
     WAIT 100
@@ -286,7 +286,7 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    # VIDEO
+    VIDEO
     getpos $fid_position
     RETURN $fid_position
 
