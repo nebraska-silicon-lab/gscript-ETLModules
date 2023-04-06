@@ -17,10 +17,10 @@ geometry.LGAD.fid_bl: {-9.7,0,0}
 geometry.LGAD.fid_br: {0,9.8,0}
 
 #geometry of throughput baseplate 
-geometry.ETL_AlN_Baseplate.fid_tr: {20.05,-28.75,0}
-geometry.ETL_AlN_Baseplate.fid_tl: {-22.05,-28.75,0}
-geometry.ETL_AlN_Baseplate.fid_bl: {-22.05,28.75,0}
-geometry.ETL_AlN_Baseplate.fid_br: {22.05,28.75,0}
+geometry.BP.fid_tr: {20.05,-28.75,0}
+geometry.BP.fid_tl: {-22.05,-28.75,0}
+geometry.BP.fid_bl: {-22.05,28.75,0}
+geometry.BP.fid_br: {22.05,28.75,0}
 
 #throuhput PCB geometries
 geometry.Module_PCB.fid_tr: {19.55,-26.741,0}
