@@ -44,3 +44,14 @@ vision.etl_throughput_etroc.sizeMax: 0.200000
 vision.etl_throughput_etroc.aspectRatioMin: 0.900000
 vision.etl_throughput_etroc.aspectRatioMax: 1.100000
 vision.etl_throughput_etroc.colorGroups: 2
+
+vision.throughput_pcb.method: find_template
+vision.throughput_pcb.templateBlurFactor: 0.000000
+vision.throughput_pcb.minConcurrence: 0.000000
+vision.throughput_pcb.templatePath: Scripts\ETLModules\ThroughPut\fiducial_reference_1.png
+
+vision.throughput_baseplate.method: find_template
+vision.throughput_baseplate.templateBlurFactor: 10
+vision.throughput_baseplate.minConcurrence: 0.000000
+vision.throughput_baseplate.templatePath: Scripts\ETLModules\ThroughPut\ss_baseplate_corner_1.png
+
