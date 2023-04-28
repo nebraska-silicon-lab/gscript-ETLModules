@@ -49,35 +49,35 @@ COPY $mod_idx 0
     GOTOIFN @ETROC_SURVEY_LOOP_START &enabled_{$mod_idx}
     PRINT "Begin Survey of ETROCs for Module %d, ID=%d" $mod_idx &id_{$mod_idx}
 
-    COPY $chip_idx $mod_idx
-    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
-    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    CALL @FIX_ROT $rot -> $rot
-    COPY &etroc_init_pos_{$chip_idx} $pos
-    COPY &etroc_init_rot_{$chip_idx} $rot
-    COPY &etroc_init_pos_num_{$mod_idx}_1 $chip_idx
-    
-    COPY $chip_idx `$mod_idx+4` 
-    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
-    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    CALL @FIX_ROT $rot -> $rot
-    COPY &etroc_init_pos_{$chip_idx} $pos
-    COPY &etroc_init_rot_{$chip_idx} $rot
-    COPY &etroc_init_pos_num_{$mod_idx}_2 $chip_idx
+    COPY $chip_idx 0
+    @ETROC_SURVEY_INNER_LOOP_START
+        INC $chip_idx $chip_idx
+        GOTOIF @ETROC_SURVEY_INNER_LOOP_END `$chip_idx>4`
 
-    COPY $chip_idx `$mod_idx+8` 
-    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
-    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    COPY &etroc_init_pos_{$chip_idx} $pos
-    COPY &etroc_init_rot_{$chip_idx} $rot
-    COPY &etroc_init_pos_num_{$mod_idx}_3 $chip_idx
+        MUL $loc_offset 4 `$chip_idx-1`
+        ADD $chip_loc $loc_offset $mod_idx 
+        SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_loc} 1
+        CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_loc 2 -> $pos $rot
 
-    COPY $chip_idx `$mod_idx+12` 
-    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
-    CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    COPY &etroc_init_pos_{$chip_idx} $pos
-    COPY &etroc_init_rot_{$chip_idx} $rot
-    COPY &etroc_init_pos_num_{$mod_idx}_4 $chip_idx
+        COPY $rot_fixed $rot
+        GOTOIF @FIX_ROT_SKIP `$chip_idx>2`
+        CALL @FIX_ROT $rot -> $rot_fixed
+        @FIX_ROT_SKIP
+
+        COPY &etroc_init_pos_{$chip_loc} $pos
+        COPY &etroc_init_rot_{$chip_loc} $rot_fixed
+        COPY &etroc_init_pos_num_{$mod_idx}_{$chip_idx} $chip_loc
+
+        GOTOIFN @ETROC_SURVEY_INNER_LOOP_START &do_lgad_survey
+        COPY $lgad_loc_pos {0,0,-0.4}
+        TRANSFORML2G $lgad_target_pos $lgad_loc_pos $pos $rot
+        COPY $lgad_target_rot $rot
+        CALL @SURVEY_PART $lgad_target_pos $lgad_target_rot 3 -> $lgad_pos $lgad_rot
+        CALL @PRINT_SURVEY_RESULTS $lgad_target_pos $lgad_target_rot $lgad_pos $lgad_rot $chip_loc
+
+        GOTO @ETROC_SURVEY_INNER_LOOP_START
+    @ETROC_SURVEY_INNER_LOOP_END
+
 
     GOTO @ETROC_SURVEY_LOOP_START
 @ETROC_SURVEY_LOOP_END
@@ -255,6 +255,7 @@ END
     MOVETO $start_pos 50
 
     # GOTO @manual_fiducial_acquisition
+    AUTOFOCUS $_ 0.5 "" autoclose
 
     SETERRORMODE setvar
     WAIT 100

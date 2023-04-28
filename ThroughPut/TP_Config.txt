@@ -29,10 +29,10 @@ geometry.Module_PCB.fid_bl: {-19.55,26.741,0}
 geometry.Module_PCB.fid_br: {19.55,26.741,0}
 
 #relative positions of where the sub-assemblies will go on the Module PCB
-geometry.Module_PCB.A: {-11.0,-11.05,0}
-geometry.Module_PCB.B: {11.0,-11.05,0}
-geometry.Module_PCB.C: {-11.0,11.05,0}
-geometry.Module_PCB.D: {11.0,11.05,0}
+geometry.Module_PCB.A: {-10.8,-11.05,0}
+geometry.Module_PCB.B: {10.8,-11.05,0}
+geometry.Module_PCB.C: {-10.8,11.05,0}
+geometry.Module_PCB.D: {10.8,11.05,0}
 
 thickness.top: {0,0,0.6}
 
