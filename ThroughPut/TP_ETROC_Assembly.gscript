@@ -2,8 +2,8 @@
 # on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
 # positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
 
-VERSION v2.2
-SETLOG "TP_ETROC_Assy_{timestamp}.txt"
+VERSION v2.3
+SETLOG TP_ETROC_Assy_{timestamp}.txt
 CLEARLOG
 LOADCONFIG
 LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
@@ -11,49 +11,31 @@ LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 
 DIALOG Scripts\ETLModules\Throughput\Setup_Dialog.ini
-FLEXWRITE enabled_1 $enabled_1
-FLEXWRITE id_1 $id_1
-FLEXWRITE enabled_2 $enabled_2
-FLEXWRITE id_2 $id_2
-FLEXWRITE enabled_3 $enabled_3
-FLEXWRITE id_3 $id_3
-FLEXWRITE enabled_4 $enabled_4
-FLEXWRITE id_4 $id_4
 
-FLEXREAD $etroc_chuck_num chuck_number.top
+COPY $etroc_chuck_num &chuck_number.top
 
 HOME if-needed
 
 PRINT "Assembly Start"
 
-SETVAC "etl_chuck_{$pcb_chuck_num}" 1  # vacuum for assembly plate
-MOVENAME "etl_chuck_{$pcb_chuck_num}"
+SETVAC etl_chuck_{$pcb_chuck_num} 1  # vacuum for assembly plate
+MOVENAME etl_chuck_{$pcb_chuck_num}
 
-FLEXREAD $local_A geometry.Module_PCB.A
-FLEXREAD $local_B geometry.Module_PCB.B
-FLEXREAD $local_C geometry.Module_PCB.C
-FLEXREAD $local_D geometry.Module_PCB.D
 COPY $mod_idx 0
 @PCB_SURVEY_LOOP_START
     INC $mod_idx $mod_idx
     GOTOIF @PCB_SURVEY_LOOP_END `$mod_idx>4`
-    FLEXREAD $enabled "enabled_{$mod_idx}"
-    GOTOIFN @PCB_SURVEY_LOOP_START $enabled
-    FLEXREAD $mod_id "id_{$mod_idx}"
-    PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx $mod_id
+    GOTOIFN @PCB_SURVEY_LOOP_START &enabled_{$mod_idx}
+    PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
-    FLEXWRITE "pcb_init_pos_{$mod_idx}" $pos
-    FLEXWRITE "pcb_init_rot_{$mod_idx}" $rot
+    COPY &pcb_init_pos_{$mod_idx} $pos
+    COPY &pcb_init_rot_{$mod_idx} $rot
 
-    TRANSFORML2G $target_A $local_A $pos $rot       
-    FLEXWRITE "etroc_target_pos_{$mod_idx}_1" $target_A
-    TRANSFORML2G $target_B $local_B $pos $rot
-    FLEXWRITE "etroc_target_pos_{$mod_idx}_2" $target_B
-    TRANSFORML2G $target_C $local_C $pos $rot
-    FLEXWRITE "etroc_target_pos_{$mod_idx}_3" $target_C
-    TRANSFORML2G $target_D $local_D $pos $rot
-    FLEXWRITE "etroc_target_pos_{$mod_idx}_4" $target_D
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_1 &geometry.Module_PCB.A $pos $rot
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_2 &geometry.Module_PCB.B $pos $rot
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_3 &geometry.Module_PCB.C $pos $rot
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_4 &geometry.Module_PCB.D $pos $rot
 
     GOTO @PCB_SURVEY_LOOP_START
 @PCB_SURVEY_LOOP_END
@@ -64,40 +46,39 @@ COPY $mod_idx 0
 @ETROC_SURVEY_LOOP_START
     INC $mod_idx $mod_idx
     GOTOIF @ETROC_SURVEY_LOOP_END `$mod_idx>4`
-    FLEXREAD $enabled "enabled_{$mod_idx}"
-    GOTOIFN @ETROC_SURVEY_LOOP_START $enabled
-    FLEXREAD $mod_id "id_{$mod_idx}"
-    PRINT "Begin Survey of ETROCs for Module %d, ID=%d" $mod_idx $mod_id
+    GOTOIFN @ETROC_SURVEY_LOOP_START &enabled_{$mod_idx}
+    PRINT "Begin Survey of ETROCs for Module %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     COPY $chip_idx $mod_idx
-    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
     CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
     CALL @FIX_ROT $rot -> $rot
-    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
-    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
-    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_1" $chip_idx
+    COPY &etroc_init_pos_{$chip_idx} $pos
+    COPY &etroc_init_rot_{$chip_idx} $rot
+    COPY &etroc_init_pos_num_{$mod_idx}_1 $chip_idx
     
     COPY $chip_idx `$mod_idx+4` 
-    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
     CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
     CALL @FIX_ROT $rot -> $rot
-    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
-    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
-    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_2" $chip_idx
+    COPY &etroc_init_pos_{$chip_idx} $pos
+    COPY &etroc_init_rot_{$chip_idx} $rot
+    COPY &etroc_init_pos_num_{$mod_idx}_2 $chip_idx
 
     COPY $chip_idx `$mod_idx+8` 
-    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
     CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
-    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
-    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_3" $chip_idx
+    COPY &etroc_init_pos_{$chip_idx} $pos
+    COPY &etroc_init_rot_{$chip_idx} $rot
+    COPY &etroc_init_pos_num_{$mod_idx}_3 $chip_idx
 
     COPY $chip_idx `$mod_idx+12` 
-    SETVAC "etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx}" 1
+    SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_idx} 1
     CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_idx 2 -> $pos $rot
-    FLEXWRITE "etroc_init_pos_{$chip_idx}" $pos
-    FLEXWRITE "etroc_init_rot_{$chip_idx}" $rot
-    FLEXWRITE "etroc_init_pos_num_{$mod_idx}_4" $chip_idx
+    COPY &etroc_init_pos_{$chip_idx} $pos
+    COPY &etroc_init_rot_{$chip_idx} $rot
+    COPY &etroc_init_pos_num_{$mod_idx}_4 $chip_idx
+
     GOTO @ETROC_SURVEY_LOOP_START
 @ETROC_SURVEY_LOOP_END
 
@@ -107,10 +88,8 @@ COPY $mod_idx 0
 @ASSY_LOOP_START
     INC $mod_idx $mod_idx
     GOTOIF @ASSY_LOOP_END `$mod_idx>4`
-    FLEXREAD $enabled "enabled_{$mod_idx}"
-    GOTOIFN @ASSY_LOOP_START $enabled
-    FLEXREAD $mod_id "id_{$mod_idx}"
-    PRINT "Begin pick-and-place for Module %d, ID=%d" $mod_idx $mod_id
+    GOTOIFN @ASSY_LOOP_START &enabled_{$mod_idx}
+    PRINT "Begin pick-and-place for Module %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 1    
     CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $etroc_chuck_num 2    
@@ -122,7 +101,7 @@ COPY $mod_idx 0
 
 UNLOADTOOL
 
-SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
+SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
 
 PRINT "Assembly Completed"
 MOVENAME home
@@ -139,17 +118,17 @@ END
 
     #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
 
-    FLEXREAD $pcb_pos "pcb_init_pos_{$pcb_pos_num}"
-    FLEXREAD $pcb_rot "pcb_init_rot_{$pcb_pos_num}"
-    FLEXREAD $etroc_init_pos_num "etroc_init_pos_num_{$pcb_pos_num}_{$etroc_pos_num}"
-    FLEXREAD $etroc_init_pos "etroc_init_pos_{$etroc_init_pos_num}"
-    FLEXREAD $etroc_init_rot "etroc_init_rot_{$etroc_init_pos_num}"
+    COPY $pcb_pos &pcb_init_pos_{$pcb_pos_num}
+    COPY $pcb_rot &pcb_init_rot_{$pcb_pos_num}
+    COPY $etroc_init_pos_num &etroc_init_pos_num_{$pcb_pos_num}_{$etroc_pos_num}
+    COPY $etroc_init_pos &etroc_init_pos_{$etroc_init_pos_num}
+    COPY $etroc_init_rot &etroc_init_rot_{$etroc_init_pos_num}
 
-    FLEXREAD $etroc_target_pos "etroc_target_pos_{$pcb_pos_num}_{$etroc_pos_num}"
+    COPY $etroc_target_pos &etroc_target_pos_{$pcb_pos_num}_{$etroc_pos_num}
 
-    MOVENAME "etl_chuck_{$etroc_chuck_num}" "" direct
-    PICKPART $etroc_init_pos $etroc_init_rot "etl_chuck_{$etroc_chuck_num}_pos_{$etroc_init_pos_num}"
-    MOVENAME "etl_chuck_{$pcb_chuck_num}" "" direct
+    MOVENAME etl_chuck_{$etroc_chuck_num} "" direct
+    PICKPART $etroc_init_pos $etroc_init_rot etl_chuck_{$etroc_chuck_num}_pos_{$etroc_init_pos_num}
+    MOVENAME etl_chuck_{$pcb_chuck_num} "" direct
     PLACEPART $etroc_target_pos $pcb_rot
 
     RETURN
@@ -183,18 +162,18 @@ END
     GOTOIF @SPC_LGAD `$part_id==3`
     
     @SPC_MODULE_PCB
-      FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
-      FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
+      COPY $pos_default &default.Module_PCB.{$chuck_num}.{$pos_num}.pos
+      COPY $rot_default &default.Module_PCB.{$chuck_num}.{$pos_num}.rot
     GOTO @SPC_END_LOAD
 
     @SPC_ETROC
-      FLEXREAD $pos_default "default.ETROC.{$chuck_num}.{$pos_num}.pos"
-      FLEXREAD $rot_default "default.ETROC.{$chuck_num}.{$pos_num}.rot"
+      COPY $pos_default &default.ETROC.{$chuck_num}.{$pos_num}.pos
+      COPY $rot_default &default.ETROC.{$chuck_num}.{$pos_num}.rot
     GOTO @SPC_END_LOAD
     
     @SPC_LGAD
-      FLEXREAD $pos_default "default.LGAD.{$chuck_num}.{$pos_num}.pos"
-      FLEXREAD $rot_default "default.LGAD.{$chuck_num}.{$pos_num}.rot"
+      COPY $pos_default &default.LGAD.{$chuck_num}.{$pos_num}.pos
+      COPY $rot_default &default.LGAD.{$chuck_num}.{$pos_num}.rot
     @SPC_END_LOAD
 
     CALL @SURVEY_PART $pos_default $rot_default $part_id -> $pos $phi
@@ -217,24 +196,24 @@ END
     GOTOIF @SP_LGAD `$part_id==3`
     
     @SP_MODULE_PCB
-      FLEXREAD $tr_local geometry.Module_PCB.fid_tr  
-      FLEXREAD $tl_local geometry.Module_PCB.fid_tl
-      FLEXREAD $bl_local geometry.Module_PCB.fid_bl
-      FLEXREAD $br_local geometry.Module_PCB.fid_br
+      COPY $tr_local &geometry.Module_PCB.fid_tr  
+      COPY $tl_local &geometry.Module_PCB.fid_tl
+      COPY $bl_local &geometry.Module_PCB.fid_bl
+      COPY $br_local &geometry.Module_PCB.fid_br
     GOTO @SP_END_LOAD
 
     @SP_ETROC
-      FLEXREAD $tr_local geometry.ETROC.fid_tr  
-      FLEXREAD $tl_local geometry.ETROC.fid_tl
-      FLEXREAD $bl_local geometry.ETROC.fid_bl
-      FLEXREAD $br_local geometry.ETROC.fid_br
+      COPY $tr_local &geometry.ETROC.fid_tr  
+      COPY $tl_local &geometry.ETROC.fid_tl
+      COPY $bl_local &geometry.ETROC.fid_bl
+      COPY $br_local &geometry.ETROC.fid_br
     GOTO @SP_END_LOAD
     
     @SP_LGAD
-      FLEXREAD $tr_local geometry.LGAD.fid_tr  
-      FLEXREAD $tl_local geometry.LGAD.fid_tl
-      FLEXREAD $bl_local geometry.LGAD.fid_bl
-      FLEXREAD $br_local geometry.LGAD.fid_br
+      COPY $tr_local &geometry.LGAD.fid_tr  
+      COPY $tl_local &geometry.LGAD.fid_tl
+      COPY $bl_local &geometry.LGAD.fid_bl
+      COPY $br_local &geometry.LGAD.fid_br
     @SP_END_LOAD
 
 
