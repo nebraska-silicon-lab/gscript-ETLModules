@@ -1,0 +1,57 @@
+# Load this file with the line:
+#
+# LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+#
+
+#tr == 1, br == 2, bl == 3, tl == 4
+#Throughput ETROC geometries 
+geometry.ETROC.fid_tr: {9.5,-9.75,0}
+geometry.ETROC.fid_tl: {-9.5,-9.75,0}
+geometry.ETROC.fid_bl: {-9.5,9.75,0}
+geometry.ETROC.fid_br: {9.5,9.75,0}
+
+#Throughput LGAD geometries (-90 rot when on chuck, arrow facing down)
+geometry.LGAD.fid_tr: {9.7,0,0}
+geometry.LGAD.fid_tl: {0,-9.8,0}
+geometry.LGAD.fid_bl: {-9.7,0,0}
+geometry.LGAD.fid_br: {0,9.8,0}
+
+#geometry of throughput baseplate 
+geometry.BP.fid_tr: {20.05,-28.75,0}
+geometry.BP.fid_tl: {-22.05,-28.75,0}
+geometry.BP.fid_bl: {-22.05,28.75,0}
+geometry.BP.fid_br: {22.05,28.75,0}
+
+#throuhput PCB geometries
+geometry.Module_PCB.fid_tr: {19.55,-26.741,0}
+geometry.Module_PCB.fid_tl: {-19.55,-26.741,0}
+geometry.Module_PCB.fid_bl: {-19.55,26.741,0}
+geometry.Module_PCB.fid_br: {19.55,26.741,0}
+
+#relative positions of where the sub-assemblies will go on the Module PCB
+geometry.Module_PCB.A: {-10.8,-11.05,0}
+geometry.Module_PCB.B: {10.8,-11.05,0}
+geometry.Module_PCB.C: {-10.8,11.05,0}
+geometry.Module_PCB.D: {10.8,11.05,0}
+
+thickness.top: {0,0,0.6}
+
+#Pattern Recognition Parameters
+vision.etl_throughput_etroc.method: find_patches
+vision.etl_throughput_etroc.dilateSize: 6
+vision.etl_throughput_etroc.sizeMin: 0.080000
+vision.etl_throughput_etroc.sizeMax: 0.200000
+vision.etl_throughput_etroc.aspectRatioMin: 0.900000
+vision.etl_throughput_etroc.aspectRatioMax: 1.100000
+vision.etl_throughput_etroc.colorGroups: 2
+
+vision.throughput_pcb.method: find_template
+vision.throughput_pcb.templateBlurFactor: 0.000000
+vision.throughput_pcb.minConcurrence: 0.000000
+vision.throughput_pcb.templatePath: Scripts\ETLModules\ThroughPut\fiducial_reference_1.png
+
+vision.throughput_baseplate.method: find_template
+vision.throughput_baseplate.templateBlurFactor: 10
+vision.throughput_baseplate.minConcurrence: 0.000000
+vision.throughput_baseplate.templatePath: Scripts\ETLModules\ThroughPut\ss_baseplate_corner_1.png
+

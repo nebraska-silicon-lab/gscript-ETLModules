@@ -6,10 +6,10 @@ LOADCONFIG "" Scripts\ETLModules\assembly_positions.txt
 COPY $bot_chuck_num 3
 GETINTPOPUP $bot_pos_num "Which module PCB position are you using?"
 
-COPY $AlN_chuck_num 4 #make sure you change in assembly text too! so they match!
-COPY $AlN_pos_num 0 #NEED TO ADD ALN POSITIONS TO ASSEMBLY POSITIONS WHEN WE GET THE PIECE FROM THE SHOP
+COPY $AlN_chuck_num 1
+COPY $AlN_pos_num 4
 
-COPY $top_thickness {0,0,0.78} #make sure this is the thickness too!
+COPY $top_thickness {0,0,0.72}
 
 HOME if-needed
 

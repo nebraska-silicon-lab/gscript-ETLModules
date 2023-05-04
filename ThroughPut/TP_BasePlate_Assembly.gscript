@@ -1,0 +1,233 @@
+VERSION v2.2
+SETLOG "TP_BP_Assy_{timestamp}.txt"
+CLEARLOG
+LOADCONFIG
+LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+LOADCONFIG "" Config\ETL\TP_Site_Config.txt
+
+
+DIALOG Scripts\ETLModules\Throughput\Setup_Dialog.ini
+FLEXWRITE enabled_1 $enabled_1
+FLEXWRITE id_1 $id_1
+FLEXWRITE enabled_2 $enabled_2
+FLEXWRITE id_2 $id_2
+FLEXWRITE enabled_3 $enabled_3
+FLEXWRITE id_3 $id_3
+FLEXWRITE enabled_4 $enabled_4
+FLEXWRITE id_4 $id_4
+
+FLEXREAD $etroc_chuck_num chuck_number.top
+FLEXREAD $bp_chuck_num chuck_number.top
+
+HOME if-needed
+
+PRINT "Assembly Start"
+
+SETVAC "etl_chuck_{$pcb_chuck_num}" 1  # vacuum for assembly plate
+MOVENAME "etl_chuck_{$pcb_chuck_num}"
+
+
+COPY $mod_idx 0
+@PCB_SURVEY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @PCB_SURVEY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @PCB_SURVEY_LOOP_START $enabled
+    FLEXREAD $mod_id "id_{$mod_idx}"
+    PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx $mod_id
+
+    CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
+    FLEXWRITE "pcb_init_pos_{$mod_idx}" $pos
+    FLEXWRITE "pcb_init_rot_{$mod_idx}" $rot
+    FLEXWRITE "bp_pos_idx_{$mod_idx}" `$mod_idx+4`
+
+    GOTO @PCB_SURVEY_LOOP_START
+@PCB_SURVEY_LOOP_END
+
+MOVENAME "etl_chuck_{$bp_chuck_num}"
+
+COPY $mod_idx 0
+@BP_SURVEY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @BP_SURVEY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @BP_SURVEY_LOOP_START $enabled
+
+    PRINT "Begin Survey of Baseplate %d" $mod_idx
+    FLEXREAD $bp_pos_idx "bp_pos_idx_{$mod_idx}"
+    SETVAC "etl_chuck_{$bp_chuck_num}_pos_{$bp_pos_idx}" 1
+
+    CALL @SURVEY_PART_FROM_CONFIG $bp_chuck_num $bp_pos_idx 2 -> $pos $rot
+    FLEXWRITE "bp_init_pos_{$bp_pos_idx}" $pos
+    FLEXWRITE "bp_init_rot_{$bp_pos_idx}" $rot
+
+    GOTO @BP_SURVEY_LOOP_START
+@BP_SURVEY_LOOP_END
+
+LOADTOOL etl_picker_tool
+
+COPY $mod_idx 0
+@ASSY_LOOP_START
+    INC $mod_idx $mod_idx
+    GOTOIF @ASSY_LOOP_END `$mod_idx>4`
+    FLEXREAD $enabled "enabled_{$mod_idx}"
+    GOTOIFN @ASSY_LOOP_START $enabled
+    FLEXREAD $mod_id "id_{$mod_idx}"
+    PRINT "Begin pick-and-place for Module %d, ID=%d" $mod_idx $mod_id
+
+    CALL @PICK_AND_PLACE $pcb_chuck_num $mod_idx $bp_chuck_num
+
+    GOTO @ASSY_LOOP_START
+@ASSY_LOOP_END
+
+UNLOADTOOL
+
+SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
+
+PRINT "Assembly Completed"
+MOVENAME home
+END
+
+
+@PICK_AND_PLACE(pcb_chuck_num,pcb_pos_num,bp_chuck_num)
+#Arguments
+#    pcb_chuck_num = chuck number of the Module PCB
+#    pcb_pos_num = position number of the Module PCB
+#    bp_chuck_num = chuck number of ETROC+LGAD subasssemblies
+    FLEXREAD $top_thickness thickness.top
+    MUL $top_offset $top_thickness {0,0,-1}
+
+    #Puts relative alignment of subassemblies in gantry coordinates using Module PCB position
+
+    FLEXREAD $pcb_pos "pcb_init_pos_{$pcb_pos_num}"
+    FLEXREAD $pcb_rot "pcb_init_rot_{$pcb_pos_num}"
+
+    FLEXREAD $bp_pos_idx "bp_pos_idx_{$mod_idx}"
+    FLEXREAD $bp_init_pos "bp_init_pos_{$bp_pos_idx}"
+    FLEXREAD $bp_init_rot "bp_init_rot_{$bp_pos_idx}"
+
+ 
+    ADD $bp_target_pos $pcb_pos $top_offset
+
+    MOVENAME "etl_chuck_{$bp_chuck_num}" "" direct
+    PICKPART $bp_init_pos $bp_init_rot "etl_chuck_{$bp_chuck_num}_pos_{$bp_pos_idx}"
+    MOVENAME "etl_chuck_{$pcb_chuck_num}" "" direct
+    PLACEPART $bp_target_pos $pcb_rot
+
+    RETURN
+
+
+@SURVEY_PART_FROM_CONFIG(chuck_num,pos_num,part_id)
+    # Arguments:
+    #  $chuck_num - 
+    #  $pos_num - 
+    #  $part_id - integer selector for which type of part 
+    #    part_id=1 => Module PCB
+    #    part_id=2 => Baseplate
+    # Returns
+    #  $pos - center of part
+    #  $phi - rotation of part in x-y plane
+
+    SETLIGHT 40
+
+    GOTOIF @SPC_MODULE_PCB `$part_id==1`
+    GOTOIF @SPC_BP `$part_id==2`
+    
+    @SPC_MODULE_PCB
+      FLEXREAD $pos_default "default.Module_PCB.{$chuck_num}.{$pos_num}.pos"
+      FLEXREAD $rot_default "default.Module_PCB.{$chuck_num}.{$pos_num}.rot"
+    GOTO @SPC_END_LOAD
+    
+    @SPC_BP
+      FLEXREAD $pos_default "default.BP.{$chuck_num}.{$pos_num}.pos"
+      FLEXREAD $rot_default "default.BP.{$chuck_num}.{$pos_num}.rot"
+    GOTO @SPC_END_LOAD
+
+    @SPC_END_LOAD
+
+    CALL @SURVEY_PART $pos_default $rot_default $part_id -> $pos $phi
+    RETURN $pos $phi
+
+
+@SURVEY_PART(pos_default,rot_default,part_id)
+    # Arguments:
+    #  $chuck_num - 
+    #  $pos_num -
+    #  $part_id - integer selector for which type of part 
+    #    part_id=1 => Module PCB
+    #    part_id=2 => Baseplate
+    # Returns
+    #  $pos - center of part
+    #  $phi - rotation of part in x-y plane
+
+    GOTOIF @SP_MODULE_PCB `$part_id==1`
+    GOTOIF @SP_BP `$part_id==2`
+    
+    @SP_MODULE_PCB
+      FLEXREAD $tr_local geometry.Module_PCB.fid_tr  
+      FLEXREAD $tl_local geometry.Module_PCB.fid_tl
+      FLEXREAD $bl_local geometry.Module_PCB.fid_bl
+      FLEXREAD $br_local geometry.Module_PCB.fid_br
+    GOTO @SP_END_LOAD
+
+    @SP_BP
+      FLEXREAD $tr_local geometry.BP.fid_tr  
+      FLEXREAD $tl_local geometry.BP.fid_tl
+      FLEXREAD $bl_local geometry.BP.fid_bl
+      FLEXREAD $br_local geometry.BP.fid_br
+    GOTO @SP_END_LOAD
+
+
+    @SP_END_LOAD
+
+    #converts the local coordinates to global gantry coordinates usint start location and orientation
+    TRANSFORML2G $tr_global $tr_local $pos_default $rot_default
+    TRANSFORML2G $tl_global $tl_local $pos_default $rot_default
+    TRANSFORML2G $bl_global $bl_local $pos_default $rot_default
+    TRANSFORML2G $br_global $br_local $pos_default $rot_default
+
+    #this is to get corrected centers and orientation, the code above gives general area
+    CALL @ACQUIREFIDUCIAL $tr_global $part_id 1 -> $tr_corrected
+    CALL @ACQUIREFIDUCIAL $br_global $part_id 2 -> $br_corrected
+    CALL @ACQUIREFIDUCIAL $tl_global $part_id 4 -> $tl_corrected
+    CALL @ACQUIREFIDUCIAL $bl_global $part_id 3 -> $bl_corrected
+
+    # Turns measured corners or fiducials into center and orientation
+    GOTOIF @FIT_MODULE_PCB `$part_id==1`
+    GOTOIF @FIT_BP `$part_id==2`
+
+    @FIT_MODULE_PCB
+      FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      GOTO @FINISH_SURVEY
+    @FIT_BP
+      FIT $pos $rot BP $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      GOTO @FINISH_SURVEY
+
+    @FINISH_SURVEY
+    QUAT2EULER $phi $_ $_ $rot
+    RETURN $pos $phi
+
+@ACQUIREFIDUCIAL(start_pos,part_id,loc)
+    # Arguments:
+    #  $start_pos - Position to initially search for the fiducial
+    #  $part_id - integer selector for which type of part 
+    #    part_id=1 => Module PCB
+    #    part_id=2 => Baseplate
+    #  $loc - tr == 1, br == 2, bl == 3, tl == 4
+    MOVETO $start_pos 50
+
+    # GOTO @manual_fiducial_acquisition
+    GOTOIF @manual_fiducial_acquisition `$part_id==2`
+
+    SETERRORMODE setvar
+    WAIT 100
+    FINDFID $fid_position etl_throughput_etroc
+    GOTOIF @manual_fiducial_acquisition $ERR
+    SETERRORMODE default
+    RETURN $fid_position
+    
+    @manual_fiducial_acquisition
+    SETERRORMODE default
+    VIDEO
+    getpos $fid_position
+    RETURN $fid_position
