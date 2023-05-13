@@ -29,13 +29,18 @@ COPY $mod_idx 0
     PRINT "Begin Survey of Module PCB %d, ID=%d" $mod_idx &id_{$mod_idx}
 
     CALL @SURVEY_PART_FROM_CONFIG $pcb_chuck_num $mod_idx 1 -> $pos $rot
-    COPY &pcb_init_pos_{$mod_idx} $pos
-    COPY &pcb_init_rot_{$mod_idx} $rot
 
-    TRANSFORML2G &etroc_target_pos_{$mod_idx}_1 &geometry.Module_PCB.A $pos $rot
-    TRANSFORML2G &etroc_target_pos_{$mod_idx}_2 &geometry.Module_PCB.B $pos $rot
-    TRANSFORML2G &etroc_target_pos_{$mod_idx}_3 &geometry.Module_PCB.C $pos $rot
-    TRANSFORML2G &etroc_target_pos_{$mod_idx}_4 &geometry.Module_PCB.D $pos $rot
+    CALL @FIX_ROT $rot 1 -> $rot_fixed # PCB chuck is also rotated 90 deg in FNAL.
+
+    COPY &pcb_init_pos_{$mod_idx} $pos
+    COPY &pcb_init_rot_{$mod_idx} $rot_fixed
+
+    CALL @FIX_ROT $rot_fixed 1 -> $rot_fixed # A second rotation of 90 deg is required for placement positions for some reason.
+
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_1 &geometry.Module_PCB.A $pos $rot_fixed
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_2 &geometry.Module_PCB.B $pos $rot_fixed
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_3 &geometry.Module_PCB.C $pos $rot_fixed
+    TRANSFORML2G &etroc_target_pos_{$mod_idx}_4 &geometry.Module_PCB.D $pos $rot_fixed
 
     GOTO @PCB_SURVEY_LOOP_START
 @PCB_SURVEY_LOOP_END
@@ -59,10 +64,7 @@ COPY $mod_idx 0
         SETVAC etl_chuck_{$etroc_chuck_num}_pos_{$chip_loc} 1
         CALL @SURVEY_PART_FROM_CONFIG $etroc_chuck_num $chip_loc 2 -> $pos $rot
 
-        COPY $rot_fixed $rot
-        GOTOIF @FIX_ROT_SKIP `$chip_idx>2`
-        CALL @FIX_ROT $rot -> $rot_fixed
-        @FIX_ROT_SKIP
+        CALL @FIX_ROT $rot $chip_idx -> $rot_fixed
 
         COPY &etroc_init_pos_{$chip_loc} $pos
         COPY &etroc_init_rot_{$chip_loc} $rot_fixed
@@ -104,6 +106,7 @@ UNLOADTOOL
 SETVAC etl_chuck_{$pcb_chuck_num} 0  # vacuum for assembly plate
 
 PRINT "Assembly Completed"
+SETLIGHT 0
 MOVENAME home
 END
 
@@ -255,7 +258,9 @@ END
     MOVETO $start_pos 50
 
     # GOTO @manual_fiducial_acquisition
+    SETLIGHT 10 # Focus works better with dim light.
     AUTOFOCUS $_ 0.5 "" autoclose
+    SETLIGHT 40 # Return to previous intensity
 
     SETERRORMODE setvar
     WAIT 100
@@ -271,15 +276,15 @@ END
     RETURN $fid_position
 
 
-@FIX_ROT(rot)
+@FIX_ROT(rot,idx)
     #Arguments:
     #  rot - rotation that needs to be fixed due to calculation falling outside atan2's range
-    GOTOIF @POS `$rot>=0`
-    ADD $rot $rot 180 #not positive so add 180
+    GOTOIF @POS `$idx<3`
+    ADD $rot $rot 90 #Add 90
     RETURN $rot
 
     @POS
-    SUB $rot $rot 180 #This is positive so subtract 180
+    SUB $rot $rot 90 #Subtract 90
     RETURN $rot
 
 
