@@ -2,7 +2,7 @@
 # on position 1, 5, 9, and 13 (ie row 1), while Module PCB position 2 will use 
 # positions 2, 6, 10, and 14, and so on for Module PCB position 3 and 4
 
-VERSION v2.3
+VERSION v2.5
 SETLOG TP_ETROC_Assy_{timestamp}.txt
 CLEARLOG
 LOADCONFIG
@@ -10,7 +10,7 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 
-DIALOG Scripts\ETLModules\Throughput\Setup_Dialog.ini
+DIALOG Scripts\ETLModules\Throughput\Assembly_Setup_Dialog.ini
 
 COPY $etroc_chuck_num &chuck_number.top
 
@@ -235,13 +235,13 @@ END
     GOTOIF @FIT_LGAD `$part_id==3`
 
     @FIT_MODULE_PCB
-      FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $_ Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
     @FIT_ETROC
-      FIT $pos $rot ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $_ ETROC $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
     @FIT_LGAD
-      FIT $pos $rot LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $_ LGAD $tr_corrected $br_corrected $bl_corrected $tl_corrected
 
     @FINISH_SURVEY
     QUAT2EULER $phi $_ $_ $rot
@@ -252,13 +252,14 @@ END
     #  $start_pos - Position to initially search for the fiducial
     #  $piece - PCB or ETROC, 1 or 2 respectively
     #  $loc - tr == 1, br == 2, bl == 3, tl == 4
-    MOVETO $start_pos 50
+    MOVETO $start_pos 100
 
     # GOTO @manual_fiducial_acquisition
-    AUTOFOCUS $_ 0.5 "" autoclose
+    COPY &vision.autofocus.step_size 0.1
+    AUTOFOCUS $_ 1 "" autoclose
 
     SETERRORMODE setvar
-    WAIT 100
+    WAIT 50
     FINDFID $fid_position etl_throughput_etroc
     GOTOIF @manual_fiducial_acquisition $ERR
     SETERRORMODE default
