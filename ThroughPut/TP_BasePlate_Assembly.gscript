@@ -1,4 +1,4 @@
-VERSION v2.2
+VERSION v2.5
 SETLOG "TP_BP_Assy_{timestamp}.txt"
 CLEARLOG
 LOADCONFIG
@@ -6,15 +6,7 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 
-DIALOG Scripts\ETLModules\Throughput\Setup_Dialog.ini
-FLEXWRITE enabled_1 $enabled_1
-FLEXWRITE id_1 $id_1
-FLEXWRITE enabled_2 $enabled_2
-FLEXWRITE id_2 $id_2
-FLEXWRITE enabled_3 $enabled_3
-FLEXWRITE id_3 $id_3
-FLEXWRITE enabled_4 $enabled_4
-FLEXWRITE id_4 $id_4
+DIALOG Scripts\ETLModules\Throughput\Baseplate_Assembly_Setup_Dialog.ini
 
 FLEXREAD $etroc_chuck_num chuck_number.top
 FLEXREAD $bp_chuck_num chuck_number.top
@@ -197,10 +189,10 @@ END
     GOTOIF @FIT_BP `$part_id==2`
 
     @FIT_MODULE_PCB
-      FIT $pos $rot Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $_ Module_PCB $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
     @FIT_BP
-      FIT $pos $rot BP $tr_corrected $br_corrected $bl_corrected $tl_corrected
+      FIT $pos $rot $_ BP $tr_corrected $br_corrected $bl_corrected $tl_corrected
       GOTO @FINISH_SURVEY
 
     @FINISH_SURVEY
@@ -214,9 +206,11 @@ END
     #    part_id=1 => Module PCB
     #    part_id=2 => Baseplate
     #  $loc - tr == 1, br == 2, bl == 3, tl == 4
-    MOVETO $start_pos 50
+    MOVETO $start_pos 100
 
-    # GOTO @manual_fiducial_acquisition
+    COPY &vision.autofocus.step_size 0.1
+    AUTOFOCUS $_ 1 "" autoclose
+
     GOTOIF @manual_fiducial_acquisition `$part_id==2`
 
     SETERRORMODE setvar
