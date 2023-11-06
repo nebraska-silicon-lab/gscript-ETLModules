@@ -9,6 +9,9 @@ LOADCONFIG
 LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
+COPY $neg45 -45   # Used in the condition of the extra head rotation mitigation block.
+FLEXREAD $high_int default.light_high_int 40
+FLEXREAD $low_int default.light_low_int 40
 
 DIALOG Scripts\ETLModules\Throughput\Assembly_Setup_Dialog.ini
 
@@ -82,6 +85,7 @@ COPY $mod_idx 0
     GOTO @ETROC_SURVEY_LOOP_START
 @ETROC_SURVEY_LOOP_END
 
+SETLIGHT 0
 LOADTOOL etl_picker_tool
 
 COPY $mod_idx 0
@@ -126,6 +130,12 @@ END
 
     COPY $etroc_target_pos &etroc_target_pos_{$pcb_pos_num}_{$etroc_pos_num}
 
+    # Extra head rotation mitigation between UNL and FNAL.
+    GOTOIF @PCB_ROT_NO_CHANGE `$pcb_rot>$neg45`
+    ADD $etroc_init_rot $etroc_init_rot 90
+    ADD $pcb_rot $pcb_rot 90
+    @PCB_ROT_NO_CHANGE
+
     MOVENAME etl_chuck_{$etroc_chuck_num} "" direct
     PICKPART $etroc_init_pos $etroc_init_rot etl_chuck_{$etroc_chuck_num}_pos_{$etroc_init_pos_num}
     MOVENAME etl_chuck_{$pcb_chuck_num} "" direct
@@ -155,7 +165,7 @@ END
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
-    SETLIGHT 40
+    SETLIGHT $high_int
 
     GOTOIF @SPC_MODULE_PCB `$part_id==1`
     GOTOIF @SPC_ETROC `$part_id==2`
@@ -256,7 +266,9 @@ END
 
     # GOTO @manual_fiducial_acquisition
     COPY &vision.autofocus.step_size 0.1
+    SETLIGHT $low_int
     AUTOFOCUS $_ 1 "" autoclose
+    SETLIGHT $high_int
 
     SETERRORMODE setvar
     WAIT 50
@@ -267,7 +279,9 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
+    SETLIGHT $low_int
     VIDEO
+    SETLIGHT $high_int
     getpos $fid_position
     RETURN $fid_position
 
