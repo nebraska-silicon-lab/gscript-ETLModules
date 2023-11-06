@@ -6,6 +6,8 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 COPY $neg45 -45   # Used in the condition of the extra head rotation mitigation block.
+FLEXREAD $high_int default.light_high_int 40
+FLEXREAD $low_int default.light_low_int 40
 
 DIALOG Scripts\ETLModules\Throughput\Baseplate_Assembly_Setup_Dialog.ini
 
@@ -13,6 +15,14 @@ FLEXREAD $etroc_chuck_num chuck_number.top
 FLEXREAD $bp_chuck_num chuck_number.top
 
 HOME if-needed
+
+SETVAC etl_chuck_4_pos_* 1
+COPY $_ 5
+@VAC_LOOP
+SETVAC etl_chuck_4_pos_{$_} 0
+INC $_ $_
+GOTOIF @VAC_LOOP `$_<9`
+WAIT 1000
 
 PRINT "Assembly Start"
 
@@ -80,6 +90,7 @@ SETVAC "etl_chuck_{$pcb_chuck_num}" 0  # vacuum for assembly plate
 PRINT "Assembly Completed"
 MOVENAME home
 SETLIGHT 0
+SETVAC etl_chuck_4_pos_* 0
 END
 
 
@@ -128,7 +139,7 @@ END
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
 
     GOTOIF @SPC_MODULE_PCB `$part_id==1`
     GOTOIF @SPC_BP `$part_id==2`
@@ -217,9 +228,9 @@ END
     MOVETO $start_pos 100
 
     COPY &vision.autofocus.step_size 0.1
-    SETLIGHT &default.light_low_int
+    SETLIGHT $low_int
     AUTOFOCUS $_ 1 "" autoclose
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
 
     GOTOIF @manual_fiducial_acquisition `$part_id==2`
 
@@ -232,8 +243,8 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    SETLIGHT &default.light_low_int
+    SETLIGHT $low_int
     VIDEO
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
     getpos $fid_position
     RETURN $fid_position

@@ -10,6 +10,8 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 COPY $neg45 -45   # Used in the condition of the extra head rotation mitigation block.
+FLEXREAD $high_int default.light_high_int 40
+FLEXREAD $low_int default.light_low_int 40
 
 DIALOG Scripts\ETLModules\Throughput\Assembly_Setup_Dialog.ini
 
@@ -163,7 +165,7 @@ END
     #  $pos - center of part
     #  $phi - rotation of part in x-y plane
 
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
 
     GOTOIF @SPC_MODULE_PCB `$part_id==1`
     GOTOIF @SPC_ETROC `$part_id==2`
@@ -264,9 +266,9 @@ END
 
     # GOTO @manual_fiducial_acquisition
     COPY &vision.autofocus.step_size 0.1
-    SETLIGHT &default.light_low_int
+    SETLIGHT $low_int
     AUTOFOCUS $_ 1 "" autoclose
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
 
     SETERRORMODE setvar
     WAIT 50
@@ -277,9 +279,9 @@ END
     
     @manual_fiducial_acquisition
     SETERRORMODE default
-    SETLIGHT &default.light_low_int
+    SETLIGHT $low_int
     VIDEO
-    SETLIGHT &default.light_high_int
+    SETLIGHT $high_int
     getpos $fid_position
     RETURN $fid_position
 
