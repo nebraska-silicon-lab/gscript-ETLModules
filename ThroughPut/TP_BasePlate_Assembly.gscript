@@ -6,6 +6,8 @@ LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
 LOADCONFIG "" Config\ETL\TP_Site_Config.txt
 
 COPY $neg45 -45   # Used in the condition of the extra head rotation mitigation block.
+FLEXREAD $high_int default.light_high_int 40
+FLEXREAD $low_int default.light_low_int 40
 
 DIALOG Scripts\ETLModules\Throughput\Baseplate_Assembly_Setup_Dialog.ini
 
