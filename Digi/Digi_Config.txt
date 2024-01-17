@@ -1,0 +1,32 @@
+# Load this file with the line:
+#
+# LOADCONFIG "" Scripts\ETLModules\ThroughPut\TP_Config.txt
+#
+
+#tr == 1, br == 2, bl == 3, tl == 4
+#ETROC corner locations 
+geometry.ETROC.fid_tr: {10.5,-11.5,0}
+geometry.ETROC.fid_tl: {-10.5,-11.5,0}
+geometry.ETROC.fid_bl: {-10.5,11.5,0}
+geometry.ETROC.fid_br: {10.5,11.5,0}
+
+# Actual ETROC2 dimensions
+geometry.ETROC.fid_tr: {10.55,-11.632,0}
+geometry.ETROC.fid_tl: {-10.55,-11.632,0}
+geometry.ETROC.fid_br: {10.55,11.632,0}
+geometry.ETROC.fid_bl: {-10.55,11.632,0}
+
+#throuhput PCB geometries
+geometry.Module_PCB.fid_tr: {20.24,-26.95,0}
+geometry.Module_PCB.fid_tl: {-20.86,-26.95,0}
+geometry.Module_PCB.fid_bl: {-20.86,26.95,0}
+geometry.Module_PCB.fid_br: {20.94,26.95,0}
+
+#relative positions of where the sub-assemblies will go on the Module PCB
+
+geometry.Module_PCB.A: {-10.85,-11.95,0}
+geometry.Module_PCB.B: {10.85,-11.95,0}
+geometry.Module_PCB.C: {-10.85,11.95,0}
+geometry.Module_PCB.D: {10.85,11.95,0}
+
+thickness.top: {0,0,0.6}

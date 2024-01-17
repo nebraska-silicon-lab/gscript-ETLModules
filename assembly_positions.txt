@@ -4,16 +4,6 @@
 #
 
 #tr == 1, br == 2, bl == 3, tl == 4
-# geometry.ETL_Sensor_PCB_Mockup.fid_tr: {-10.9, 9.95,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_tl: {-10.9, 8.01,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_bl: {-10.9,-7.58,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_br: {-10.9,-9.52,0}
-
-# geometry.ETL_Sensor_PCB_Mockup.fid_tr: {-10.89,-9.64,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_tl: {-10.89,9.74,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_bl: {-10.40,9.74,0}
-# geometry.ETL_Sensor_PCB_Mockup.fid_br: {-10.40,-9.64,0}
-
 geometry.ETL_Sensor_PCB_Mockup.fid_tr: {9.64,-10.89,0}
 geometry.ETL_Sensor_PCB_Mockup.fid_tl: {-9.74,-10.89,0}
 geometry.ETL_Sensor_PCB_Mockup.fid_bl: {-9.74,-10.40,0}
